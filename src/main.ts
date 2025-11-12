@@ -18,4 +18,8 @@ async function bootstrap() {
     'Aswenna',
   );
 }
-bootstrap();
+
+bootstrap().catch((error) => {
+  Logger.error('Failed to bootstrap the application', error, 'Aswenna');
+  process.exit(1);
+});
