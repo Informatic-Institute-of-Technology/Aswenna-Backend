@@ -7,4 +7,8 @@ export default () => ({
   db: {
     uri: process.env.MONGO_URI,
   },
+  auth0: {
+    audience: process.env.AUTH0_AUDIENCE || '',
+    domain: process.env.AUTH0_DOMAIN || '',
+  },
 });
