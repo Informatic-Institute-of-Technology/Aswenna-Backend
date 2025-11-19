@@ -6,12 +6,12 @@ import {
 } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Request } from 'express';
-import { createRemoteJWKSet, jwtVerify } from 'jose';
+import { createRemoteJWKSet, JWTPayload, jwtVerify } from 'jose';
 
 // Augment Express Request to include `user`
 declare module 'express' {
   interface Request {
-    user?: unknown;
+    user: JWTPayload;
   }
 }
 
