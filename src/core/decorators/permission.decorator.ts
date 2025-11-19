@@ -1,5 +1,5 @@
 import { applyDecorators, SetMetadata } from '@nestjs/common';
 
-export function Scope(permission: string) {
+export function Permission(permission: string) {
   return applyDecorators(SetMetadata('permission', [permission]));
 }
