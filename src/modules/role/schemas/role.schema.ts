@@ -5,7 +5,7 @@ import { Permission } from 'src/modules/permission/schemas/permission.schema';
 
 @Schema({ timestamps: true })
 export class Role extends Document {
-  declare readonly _id: string;
+  declare readonly _id: Types.ObjectId;
 
   @Prop()
   readonly name: string;

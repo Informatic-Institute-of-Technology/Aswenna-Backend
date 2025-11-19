@@ -6,7 +6,7 @@ import { Role } from 'src/modules/role/schemas/role.schema';
 
 @Schema({ timestamps: true })
 export class User extends Document {
-  declare readonly _id: string;
+  declare readonly _id: Types.ObjectId;
 
   @Prop()
   readonly firstName: string;

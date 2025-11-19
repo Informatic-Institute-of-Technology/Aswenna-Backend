@@ -1,10 +1,10 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document } from 'mongoose';
+import { Document, Types } from 'mongoose';
 import { Meta } from 'src/common/schemas/meta.schema';
 
 @Schema({ timestamps: true })
 export class Permission extends Document {
-  declare readonly _id: string;
+  declare readonly _id: Types.ObjectId;
 
   @Prop()
   readonly scope: string;
