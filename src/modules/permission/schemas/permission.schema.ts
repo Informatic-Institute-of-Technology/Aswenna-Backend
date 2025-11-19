@@ -1,16 +1,20 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
+import { PermissionType } from 'src/common/enums/permission.type.enum';
 import { Meta } from 'src/common/schemas/meta.schema';
 
 @Schema({ timestamps: true })
 export class Permission extends Document {
   declare readonly _id: Types.ObjectId;
 
-  @Prop()
+  @Prop({ unique: true, required: true })
   readonly scope: string;
 
   @Prop()
   readonly description: string;
+
+  @Prop({ enum: PermissionType, default: PermissionType.API })
+  readonly type: PermissionType;
 
   @Prop([Meta])
   readonly meta: Meta[];
