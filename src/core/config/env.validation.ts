@@ -9,8 +9,4 @@ export const validationSchema = Joi.object({
 
   // Database
   MONGO_URI: Joi.string().uri().required(),
-
-  // AUTH0
-  AUTH0_AUDIENCE: Joi.string().required(),
-  AUTH0_DOMAIN: Joi.string().required(),
 });
