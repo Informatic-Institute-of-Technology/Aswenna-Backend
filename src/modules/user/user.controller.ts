@@ -1,40 +1,42 @@
-import { Controller, Delete, Get, Patch, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { UserService } from './user.service';
-import { Auth } from 'src/core/decorators/auth.decorator';
-import { Permission } from 'src/core/decorators/permission.decorator';
-
-@Controller('v1/user')
-@Auth()
+import { UserCreateDto } from './dtos/user.create.dto';
+import { UserParamsDto } from './dtos/user.query.dto';
+import { PaginationDto } from 'src/common/dtos/pagination.dto';
+@Controller({ path: 'user', version: '1' })
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
   @Get()
-  @Permission('read:users')
-  async getAll() {
-    await this.userService.findAll();
+  async getAll(@Query() query: PaginationDto) {
+    return this.userService.findAll(
+      query.page,
+      query.limit,
+      query.search,
+      query.sort,
+    );
   }
 
   @Get(':user')
-  @Permission('read:user')
-  async getById() {
-    await this.userService.findById('');
+  async getById(@Param() params: UserParamsDto) {
+    return this.userService.findById(params.user);
   }
 
   @Post()
-  @Permission('create:user')
-  async create() {
-    await this.userService.create({});
-  }
-
-  @Patch(':user')
-  @Permission('update:user')
-  async updateById() {
-    await this.userService.updateById('', {});
+  async create(@Body() createUserDto: UserCreateDto) {
+    return this.userService.create(createUserDto);
   }
 
   @Delete(':user')
-  @Permission('delete:user')
-  async deleteById() {
-    await this.userService.deleteById('');
+  async deleteById(@Param() params: UserParamsDto) {
+    return this.userService.deleteById(params.user);
   }
 }

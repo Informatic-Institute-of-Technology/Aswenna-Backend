@@ -1,7 +1,7 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { ConfigService } from '@nestjs/config';
-import { Logger, ValidationPipe } from '@nestjs/common';
+import { Logger, ValidationPipe, VersioningType } from '@nestjs/common';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -10,7 +10,16 @@ async function bootstrap() {
   const globalPrefix = configService.get<string>('app.apiPrefix') || 'api';
   const port = configService.get<number>('app.port') || 3000;
 
-  app.useGlobalPipes(new ValidationPipe({ whitelist: true, transform: true }));
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      transform: true,
+      forbidNonWhitelisted: true,
+    }),
+  );
+  app.enableVersioning({
+    type: VersioningType.URI,
+  });
   app.setGlobalPrefix(globalPrefix);
   await app.listen(port);
 

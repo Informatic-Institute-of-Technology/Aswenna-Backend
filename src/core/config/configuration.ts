@@ -7,4 +7,8 @@ export default () => ({
   db: {
     uri: process.env.MONGO_URI,
   },
+  jwt: {
+    secret: process.env.JWT_SECRET || 'defaultSecret',
+    expiration: process.env.JWT_EXPIRATION || '1h',
+  },
 });

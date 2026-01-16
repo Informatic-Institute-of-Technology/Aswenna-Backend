@@ -1,4 +1,4 @@
-import { Prop, Schema } from '@nestjs/mongoose';
+import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 import { Meta } from 'src/common/schemas/meta.schema';
 import { Permission } from 'src/modules/permission/schemas/permission.schema';
@@ -32,6 +32,9 @@ export class User extends Document {
   @Prop({ default: false })
   readonly phoneNumberVerified: boolean;
 
+  @Prop({ select: false })
+  readonly password: string;
+
   @Prop()
   readonly profilePicture: string;
 
@@ -44,15 +47,17 @@ export class User extends Document {
   @Prop([Meta])
   readonly meta: Meta[];
 
-  @Prop()
+  @Prop({ default: 'system' })
   readonly createdBy: string;
 
   @Prop(Date)
   readonly createdAt: Date;
 
-  @Prop()
+  @Prop({ default: 'system' })
   readonly updatedBy: string;
 
   @Prop(Date)
   readonly updatedAt: Date;
 }
+
+export const UserSchema = SchemaFactory.createForClass(User);
