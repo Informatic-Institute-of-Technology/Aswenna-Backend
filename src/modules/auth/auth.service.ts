@@ -25,7 +25,11 @@ export class AuthService {
 
     if (!isPasswordValid) throw new UnauthorizedException(T.invalidCredentials);
 
-    const payload = { sub: user._id.toString(), email: user.email };
+    const payload = {
+      sub: user._id.toString(),
+      email: user.email,
+      role: 'Farmer',
+    };
 
     const expiresIn = parseDurationToSeconds(
       this.configService.get<string>('jwt.expiration'),
