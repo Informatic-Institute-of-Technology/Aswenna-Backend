@@ -21,6 +21,7 @@ async function bootstrap() {
     type: VersioningType.URI,
   });
   app.setGlobalPrefix(globalPrefix);
+  app.enableCors();
   await app.listen(port);
 
   Logger.log(
