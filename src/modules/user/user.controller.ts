@@ -4,6 +4,7 @@ import {
   Delete,
   Get,
   Param,
+  Patch,
   Post,
   Query,
 } from '@nestjs/common';
@@ -11,6 +12,7 @@ import { UserService } from './user.service';
 import { UserCreateDto } from './dtos/user.create.dto';
 import { UserParamsDto } from './dtos/user.query.dto';
 import { PaginationDto } from 'src/common/dtos/pagination.dto';
+import { UserUpdateDto } from './dtos/user.update.dto';
 @Controller({ path: 'user', version: '1' })
 export class UserController {
   constructor(private readonly userService: UserService) {}
@@ -33,6 +35,14 @@ export class UserController {
   @Post()
   async create(@Body() createUserDto: UserCreateDto) {
     return this.userService.create(createUserDto);
+  }
+
+  @Patch(':user')
+  async updateById(
+    @Param() params: UserParamsDto,
+    @Body() user: UserUpdateDto,
+  ) {
+    return this.userService.updateById(params.user, user);
   }
 
   @Delete(':user')
