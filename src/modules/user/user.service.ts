@@ -3,7 +3,7 @@ import { InjectModel } from '@nestjs/mongoose';
 import { FilterQuery, Model } from 'mongoose';
 import * as bcrypt from 'bcrypt';
 import { User } from './schemas/user.schema';
-import { UserCreateI } from './user.types';
+import { UserCreateI, UserUpdateI } from './user.types';
 import {
   PaginatedResponseType,
   ResponseType,
@@ -100,6 +100,16 @@ export class UserService {
 
   async findByEmailWithPassword(email: string): Promise<User | null> {
     return this.userModel.findOne({ email }).select('+password').exec();
+  }
+
+  async updateById(target: string, user: UserUpdateI): Promise<User | null> {
+    await this.findById(target);
+
+    return await this.userModel
+      .findByIdAndUpdate(target, user, {
+        new: true,
+      })
+      .exec();
   }
 
   async deleteById(target: string): Promise<ResponseType> {
