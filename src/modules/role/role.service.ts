@@ -74,15 +74,13 @@ export class RoleService {
     return role;
   }
 
-  async findByName(name: string): Promise<Role> {
-    const role = await this.roleModel.findOne({ name }).exec();
-    if (!role) throw new BadRequestException(T.duplicateRole);
-
-    return role;
+  async findByName(name: string): Promise<Role | null> {
+    return await this.roleModel.findOne({ name }).exec();
   }
 
   async create(role: RoleCreateI): Promise<Role> {
-    await this.findByName(role.name);
+    const existingCheck = await this.findByName(role.name);
+    if (existingCheck) throw new BadRequestException(T.duplicateRole);
 
     return await this.roleModel.create(role);
   }

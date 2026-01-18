@@ -4,6 +4,7 @@ import { UserService } from '../user/user.service';
 import * as bcrypt from 'bcrypt';
 import { ConfigService } from '@nestjs/config';
 import { parseDurationToSeconds } from 'src/common/utils/time.util';
+import { AuthPayloadI } from './auth.types';
 
 const T = {
   invalidCredentials: 'Invalid credentials',
@@ -25,11 +26,16 @@ export class AuthService {
 
     if (!isPasswordValid) throw new UnauthorizedException(T.invalidCredentials);
 
-    const payload = {
+    const payload: AuthPayloadI = {
       sub: user._id.toString(),
       email: user.email,
-      role: 'Farmer',
     };
+
+    if (user.role) {
+      const role = user.role;
+
+      if (role.name) payload.role = role.name.toLowerCase();
+    }
 
     const expiresIn = parseDurationToSeconds(
       this.configService.get<string>('jwt.expiration'),

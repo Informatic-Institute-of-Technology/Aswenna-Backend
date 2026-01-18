@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { FilterQuery, Model } from 'mongoose';
+import { FilterQuery, Model, Types } from 'mongoose';
 import * as bcrypt from 'bcrypt';
 import { User } from './schemas/user.schema';
 import { UserCreateI, UserUpdateI } from './user.types';
@@ -8,16 +8,20 @@ import {
   PaginatedResponseType,
   ResponseType,
 } from 'src/common/interfaces/response.types';
+import { RoleService } from '../role/role.service';
 
 const T = {
   duplicateUserFoundByEmail: 'User with this email already exists',
   userNotFoundById: (id: string) => `User with ID ${id} not found`,
+  roleAlreadyAssigned: 'Role already assigned to user',
+  roleNotAssigned: 'Role not assigned to user',
 };
 
 @Injectable()
 export class UserService {
   constructor(
     @InjectModel(User.name) private readonly userModel: Model<User>,
+    private readonly roleService: RoleService,
   ) {}
 
   async findAll(
@@ -91,15 +95,54 @@ export class UserService {
       .join(' ');
 
     const hashedPassword = await bcrypt.hash(user.password, 10);
+
+    if (user.role) await this.roleService.findById(user.role);
+
     return await this.userModel.create({
       ...user,
       fullName,
       password: hashedPassword,
+      ...(user.role ? { role: new Types.ObjectId(user.role) } : {}),
     });
   }
 
   async findByEmailWithPassword(email: string): Promise<User | null> {
-    return this.userModel.findOne({ email }).select('+password').exec();
+    return this.userModel
+      .findOne({ email })
+      .select('+password')
+      .populate('role')
+      .exec();
+  }
+
+  async assignRole(target: string, role: string): Promise<User | null> {
+    const user = await this.findById(target);
+    if (user.role) throw new BadRequestException(T.roleAlreadyAssigned);
+
+    await this.roleService.findById(role);
+
+    return this.userModel
+      .findByIdAndUpdate(
+        target,
+        { role: new Types.ObjectId(role) },
+        { new: true },
+      )
+      .exec();
+  }
+
+  async unassignRole(userId: string, role: string): Promise<User | null> {
+    const user = await this.findById(userId);
+    if (!user.role || user.role._id.toString() !== role)
+      throw new BadRequestException(T.roleNotAssigned);
+
+    await this.roleService.findById(role);
+
+    return this.userModel
+      .findByIdAndUpdate(
+        userId,
+        { $pull: { roles: new Types.ObjectId(role) } },
+        { new: true },
+      )
+      .exec();
   }
 
   async updateById(target: string, user: UserUpdateI): Promise<User | null> {
