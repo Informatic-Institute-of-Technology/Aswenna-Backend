@@ -38,8 +38,8 @@ export class User extends Document {
   @Prop()
   readonly profilePicture: string;
 
-  @Prop({ type: [Types.ObjectId], ref: Role.name })
-  readonly roles: Role[];
+  @Prop({ type: Types.ObjectId, ref: Role.name })
+  readonly role: Role;
 
   @Prop({ type: [Types.ObjectId], ref: Permission.name })
   readonly permissions: Permission[];

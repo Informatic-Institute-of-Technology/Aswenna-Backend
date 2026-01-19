@@ -5,6 +5,7 @@ export interface UserCreateI {
   readonly email: string;
   readonly password: string;
   readonly phoneNumber: string;
+  readonly role: string;
 }
 
 export interface UserUpdateI {
@@ -12,12 +13,4 @@ export interface UserUpdateI {
   readonly lastName: string;
   readonly address: string;
   readonly phoneNumber: string;
-}
-
-export interface IUserFilter {
-  readonly page: number;
-  readonly limit: number;
-  readonly search?: string;
-  readonly sortBy?: string;
-  readonly sortOrder?: 'asc' | 'desc';
 }
