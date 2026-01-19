@@ -134,12 +134,10 @@ export class UserService {
     if (!user.role || user.role._id.toString() !== role)
       throw new BadRequestException(T.roleNotAssigned);
 
-    await this.roleService.findById(role);
-
     return this.userModel
       .findByIdAndUpdate(
         userId,
-        { $pull: { roles: new Types.ObjectId(role) } },
+        { $unset: { role: new Types.ObjectId(role) } },
         { new: true },
       )
       .exec();
