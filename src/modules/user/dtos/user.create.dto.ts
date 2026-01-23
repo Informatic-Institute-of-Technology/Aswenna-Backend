@@ -1,5 +1,6 @@
 import {
   IsEmail,
+  IsMongoId,
   IsNotEmpty,
   IsOptional,
   IsPhoneNumber,
@@ -37,4 +38,8 @@ export class UserCreateDto {
   @IsPhoneNumber()
   @IsOptional()
   readonly phoneNumber: string;
+
+  @IsMongoId()
+  @IsOptional()
+  readonly role: string;
 }
