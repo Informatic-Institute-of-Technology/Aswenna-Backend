@@ -21,6 +21,9 @@ export class User extends Document {
   readonly address: string;
 
   @Prop()
+  readonly nicNumber: string;
+
+  @Prop()
   readonly email: string;
 
   @Prop({ default: false })

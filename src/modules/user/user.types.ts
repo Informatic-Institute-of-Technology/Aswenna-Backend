@@ -2,6 +2,7 @@ export interface UserCreateI {
   readonly firstName: string;
   readonly lastName: string;
   readonly address: string;
+  readonly nicNumber: string;
   readonly email: string;
   readonly password: string;
   readonly phoneNumber: string;

@@ -25,6 +25,10 @@ export class UserCreateDto {
   @IsNotEmpty()
   readonly address: string;
 
+  @IsNotEmpty()
+  @IsString()
+  readonly nicNumber: string;
+
   @IsEmail()
   @IsNotEmpty()
   readonly email: string;
