@@ -1,40 +1,44 @@
-import { Controller, Delete, Get, Patch, Post } from '@nestjs/common';
+
+import {Controller,Delete,Get,Patch,Post,Param,Body,} from '@nestjs/common';
 import { PermissionService } from './permission.service';
 import { Auth } from 'src/core/decorators/auth.decorator';
 import { Permission } from 'src/core/decorators/permission.decorator';
+import { CreatePermissionDto } from './dtos/permission.create.dto';
+import { UpdatePermissionDto } from './dtos/permission.update.dto';
 
-@Controller('v1/permission')
-@Auth()
+@Controller('v1/permissions')
 export class PermissionController {
   constructor(private readonly permissionService: PermissionService) {}
 
   @Get()
-  @Permission('read:permissions')
-  async getAll() {
-    await this.permissionService.findAll();
+  getAll() {
+    return this.permissionService.findAll();
   }
 
-  @Get(':permission')
+  @Get(':id')
   @Permission('read:permission')
-  async getById() {
-    await this.permissionService.findById('');
+  getById(@Param('id') id: string) {
+    return this.permissionService.findById(id);
   }
 
   @Post()
   @Permission('create:permission')
-  async create() {
-    await this.permissionService.create({});
+  create(@Body() dto: CreatePermissionDto) {
+    return this.permissionService.create(dto);
   }
 
-  @Patch(':permission')
+  @Patch(':id')
   @Permission('update:permission')
-  async updateById() {
-    await this.permissionService.updateById('', {});
+  updateById(
+    @Param('id') id: string,
+    @Body() dto: UpdatePermissionDto,
+  ) {
+    return this.permissionService.updateById(id, dto);
   }
 
-  @Delete(':permission')
+  @Delete(':id')
   @Permission('delete:permission')
-  async deleteById() {
-    await this.permissionService.deleteById('');
+  deleteById(@Param('id') id: string) {
+    return this.permissionService.deleteById(id);
   }
 }
