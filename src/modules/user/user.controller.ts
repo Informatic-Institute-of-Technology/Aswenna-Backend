@@ -14,6 +14,7 @@ import { UserParamsDto } from './dtos/user.query.dto';
 import { RoleParamsDto } from '../role/dtos/role.query.dto';
 import { PaginationDto } from 'src/common/dtos/pagination.dto';
 import { UserUpdateDto } from './dtos/user.update.dto';
+
 @Controller({ path: 'user', version: '1' })
 export class UserController {
   constructor(private readonly userService: UserService) {}

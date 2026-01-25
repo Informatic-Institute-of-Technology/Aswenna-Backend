@@ -3,11 +3,7 @@ import { IsOptional, IsPhoneNumber, IsString } from 'class-validator';
 export class UserUpdateDto {
   @IsString()
   @IsOptional()
-  readonly firstName: string;
-
-  @IsString()
-  @IsOptional()
-  readonly lastName: string;
+  readonly fullName: string;
 
   @IsString()
   @IsOptional()
