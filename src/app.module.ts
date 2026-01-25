@@ -21,5 +21,5 @@ import { LandOwnerModule } from './modules/land-owner/land-owner.module';
     FarmerModule,
     LandOwnerModule,
   ],
-
+})
 export class AppModule {}
