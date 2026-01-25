@@ -90,17 +90,12 @@ export class UserService {
     if (existingUser)
       throw new BadRequestException(T.duplicateUserFoundByEmail);
 
-    const fullName = [user.firstName?.trim(), user.lastName?.trim()]
-      .filter(Boolean)
-      .join(' ');
-
     const hashedPassword = await bcrypt.hash(user.password, 10);
 
     if (user.role) await this.roleService.findById(user.role);
 
     return await this.userModel.create({
       ...user,
-      fullName,
       password: hashedPassword,
       ...(user.role ? { role: new Types.ObjectId(user.role) } : {}),
     });

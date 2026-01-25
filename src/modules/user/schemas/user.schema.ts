@@ -9,16 +9,7 @@ export class User extends Document {
   declare readonly _id: Types.ObjectId;
 
   @Prop()
-  readonly firstName: string;
-
-  @Prop()
-  readonly lastName: string;
-
-  @Prop()
   readonly fullName: string;
-
-  @Prop()
-  readonly address: string;
 
   @Prop()
   readonly nicNumber: string;

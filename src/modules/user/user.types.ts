@@ -1,6 +1,5 @@
 export interface UserCreateI {
-  readonly firstName: string;
-  readonly lastName: string;
+  readonly fullName: string;
   readonly address: string;
   readonly nicNumber: string;
   readonly email: string;
@@ -10,8 +9,7 @@ export interface UserCreateI {
 }
 
 export interface UserUpdateI {
-  readonly firstName: string;
-  readonly lastName: string;
+  readonly fullName: string;
   readonly address: string;
   readonly phoneNumber: string;
 }

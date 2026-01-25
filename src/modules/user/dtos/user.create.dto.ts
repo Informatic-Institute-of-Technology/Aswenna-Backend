@@ -12,15 +12,8 @@ import {
 export class UserCreateDto {
   @IsString()
   @IsNotEmpty()
-  @MinLength(2)
-  readonly firstName: string;
+  readonly fullName: string;
 
-  @IsString()
-  @IsNotEmpty()
-  @MinLength(2)
-  readonly lastName: string;
-
-  @IsString()
   @IsOptional()
   @IsNotEmpty()
   readonly address: string;
