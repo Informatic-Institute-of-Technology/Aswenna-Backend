@@ -11,3 +11,10 @@ export interface FarmerCreateI {
   readonly regions: string;
   readonly specificNeeds: string;
 }
+
+export interface FarmerUpdateI {
+  readonly experience: string;
+  readonly crop: string;
+  readonly regions: string;
+  readonly specificNeeds: string;
+}
