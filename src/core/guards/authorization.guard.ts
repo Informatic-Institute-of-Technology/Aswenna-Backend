@@ -4,37 +4,24 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
 import { Reflector } from '@nestjs/core';
 import { Request } from 'express';
-import { createRemoteJWKSet, JWTPayload, jwtVerify } from 'jose';
+import { JwtService } from '@nestjs/jwt';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 
 // Augment Express Request to include `user`
 declare module 'express' {
   interface Request {
-    user: JWTPayload;
+    user: { sub: string; [key: string]: any };
   }
 }
 
 @Injectable()
 export class AuthorizationGuard implements CanActivate {
-  private readonly jwks: ReturnType<typeof createRemoteJWKSet>;
-  private readonly audience: string;
-  private readonly issuer: string;
-
   constructor(
-    private readonly configService: ConfigService,
+    private readonly jwtService: JwtService,
     private readonly reflector: Reflector,
-  ) {
-    const domain = this.configService.get<string>('auth0.domain') ?? '';
-    this.audience = this.configService.get<string>('auth0.audience') ?? '';
-    this.issuer = `https://${domain}/`;
-
-    this.jwks = createRemoteJWKSet(
-      new URL(`https://${domain}/.well-known/jwks.json`),
-    );
-  }
+  ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const isPublic = this.reflector.getAllAndOverride<boolean>(IS_PUBLIC_KEY, [
@@ -54,16 +41,11 @@ export class AuthorizationGuard implements CanActivate {
     if (!token) throw new UnauthorizedException('Invalid Authorization header');
 
     try {
-      // Decode & verify token using JWKS provider
-      const { payload } = await jwtVerify(token, this.jwks, {
-        issuer: this.issuer,
-        audience: this.audience,
-      });
-
+      const payload = await this.jwtService.verifyAsync(token);
       request.user = payload;
-
       return true;
-    } catch {
+    } catch (error) {
+      console.log('JWT verification failed:', error);
       throw new UnauthorizedException('Invalid or expired token');
     }
   }

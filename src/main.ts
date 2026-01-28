@@ -20,7 +20,11 @@ async function bootstrap() {
     type: VersioningType.URI,
   });
   app.setGlobalPrefix(globalPrefix);
-  app.enableCors();
+  app.enableCors({
+    origin: true,
+    credentials: true,
+  });
+
   await app.listen(port);
 
   Logger.log(

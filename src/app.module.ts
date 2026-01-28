@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { ConfigModule } from './core/config/config.module';
+import { JwtConfigModule } from './config/jwt/jwt.module';
 import { DatabaseModule } from './config/database/database.module';
 import { HealthModule } from './core/health/health.module';
 import { UserModule } from './modules/user/user.module';
@@ -12,6 +13,7 @@ import { LandOwnerModule } from './modules/land-owner/land-owner.module';
 @Module({
   imports: [
     ConfigModule,
+    JwtConfigModule,
     DatabaseModule,
     HealthModule,
     UserModule,
