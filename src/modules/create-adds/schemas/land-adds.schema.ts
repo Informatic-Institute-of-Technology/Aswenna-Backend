@@ -32,3 +32,5 @@ export class LandAdd extends Document {
 }
 
 export const LandAddSchema = SchemaFactory.createForClass(LandAdd);
+
+
