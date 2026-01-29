@@ -10,6 +10,7 @@ import { InvestorModule } from './modules/investor/investor.module';
 import { FarmerModule } from './modules/farmer/farmer.module';
 import { LandOwnerModule } from './modules/land-owner/land-owner.module';
 import { RequestModule } from './modules/request/request.module';
+import { CreateAddsModule } from './modules/create-adds/create-adds.module';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { RequestModule } from './modules/request/request.module';
     FarmerModule,
     LandOwnerModule,
     RequestModule,
+    CreateAddsModule,
   ],
 })
 export class AppModule {}
