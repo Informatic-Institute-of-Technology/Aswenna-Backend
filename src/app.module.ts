@@ -11,6 +11,7 @@ import { FarmerModule } from './modules/farmer/farmer.module';
 import { LandOwnerModule } from './modules/land-owner/land-owner.module';
 import { RequestModule } from './modules/request/request.module';
 import { CreateAddsModule } from './modules/create-adds/create-adds.module';
+import { NotificationModule } from './common/notification/notification.module';
 
 @Module({
   imports: [
@@ -26,6 +27,7 @@ import { CreateAddsModule } from './modules/create-adds/create-adds.module';
     LandOwnerModule,
     RequestModule,
     CreateAddsModule,
+    NotificationModule,
   ],
 })
 export class AppModule {}
