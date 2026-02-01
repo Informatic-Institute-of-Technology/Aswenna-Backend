@@ -5,10 +5,13 @@ import { CreateAddsController } from './create-adds.controller';
 import { CreateAddsService } from './create-adds.service';
 import { LandAdd, LandAddSchema } from './schemas/land-adds.schema';
 import { UserModule } from '../user/user.module';
+import { NotificationModule } from 'src/common/notification/notification.module';
+
 
 @Module({
   imports: [
     UserModule,
+    NotificationModule,
     MongooseModule.forFeature([
       { name: LandAdd.name, schema: LandAddSchema },
     ]),
@@ -17,3 +20,6 @@ import { UserModule } from '../user/user.module';
   providers: [CreateAddsService],
 })
 export class CreateAddsModule {}
+
+
+

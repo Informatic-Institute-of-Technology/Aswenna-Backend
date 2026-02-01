@@ -6,8 +6,10 @@ import { UserModule } from './modules/user/user.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { PermissionModule } from './modules/permission/permission.module';
 import { CreateAddsModule } from './modules/create-adds/create-adds.module';
+import { NotificationModule } from './common/notification/notification.module';
+
 
 @Module({
-  imports: [ConfigModule, DatabaseModule, HealthModule, UserModule, AuthModule, PermissionModule, CreateAddsModule],
+  imports: [ConfigModule, DatabaseModule, HealthModule, UserModule, AuthModule, PermissionModule, CreateAddsModule, NotificationModule],
 })
 export class AppModule {}

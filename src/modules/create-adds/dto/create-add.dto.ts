@@ -1,8 +1,6 @@
 import { IsString, IsNumber, IsOptional } from 'class-validator';
 
 export class CreateAddDto {
- @IsString()
-landOwnerId: string;
 
   @IsString()
   location: string;
