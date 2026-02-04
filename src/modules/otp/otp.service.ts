@@ -6,7 +6,7 @@ import { Otp, OtpType } from './schemas/otp.schema';
 import { SendOtpDto } from './dto/generate.otp.dto';
 import { VerifyOtpDto } from './dto/validate.otp.dto';
 import { OtpResponse, OtpVerificationResponse, SendOtpType } from './otp.types';
-import { NotificationService } from '../../common/notification/notification.service';
+import { NotificationService } from '../notification/notification.service';
 
 @Injectable()
 export class OtpService {

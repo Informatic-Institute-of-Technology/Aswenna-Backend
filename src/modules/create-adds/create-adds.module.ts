@@ -1,11 +1,10 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
-
 import { CreateAddsController } from './create-adds.controller';
 import { CreateAddsService } from './create-adds.service';
 import { LandAdd, LandAddSchema } from './schemas/land-adds.schema';
 import { UserModule } from '../user/user.module';
-import { NotificationModule } from 'src/common/notification/notification.module';
+import { NotificationModule } from '../notification/notification.module';
 
 
 @Module({

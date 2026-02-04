@@ -4,7 +4,7 @@ import { ConfigModule } from '@nestjs/config';
 import { OtpController } from './otp.controller';
 import { OtpService } from './otp.service';
 import { Otp, OtpSchema } from './schemas/otp.schema';
-import { NotificationModule } from '../../common/notification/notification.module';
+import { NotificationModule } from '../notification/notification.module';
 
 @Module({
   imports: [

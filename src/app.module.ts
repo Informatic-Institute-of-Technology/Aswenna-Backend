@@ -11,9 +11,9 @@ import { FarmerModule } from './modules/farmer/farmer.module';
 import { LandOwnerModule } from './modules/land-owner/land-owner.module';
 import { RequestModule } from './modules/request/request.module';
 import { CreateAddsModule } from './modules/create-adds/create-adds.module';
-import { NotificationModule } from './common/notification/notification.module';
 import { OtpModule } from './modules/otp/otp.module';
 import { MailModule } from './config/mail/mail.module';
+import { NotificationModule } from './modules/notification/notification.module';
 
 @Module({
   imports: [
