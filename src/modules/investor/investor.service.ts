@@ -14,26 +14,26 @@ export class InvestorService {
     private readonly roleService: RoleService,
   ) {}
 
-  async create(investor: InvestorCreateI): Promise<Investor> {
+  async create(investor: InvestorCreateI) {
     const selectedRole = await this.roleService.findById(investor.role);
     if (selectedRole.name.toLowerCase() !== 'investor')
       throw new BadRequestException(
         'Role must be investor to create investor profile',
       );
 
-    const createdUser = await this.userService.create({
-      fullName: investor.fullName,
-      address: investor.address,
-      nicNumber: investor.nicNumber,
-      email: investor.email,
-      phoneNumber: investor.phoneNumber,
-      password: investor.password,
-      role: investor.role,
-    });
+    // const createdUser = await this.userService.create({
+    //   fullName: investor.fullName,
+    //   // address: investor.address,
+    //   nicNumber: investor.nicNumber,
+    //   email: investor.email,
+    //   phoneNumber: investor.phoneNumber,
+    //   password: investor.password,
+    //   role: investor.role,
+    // });
 
-    return await this.investorModel.create({
-      ...investor,
-      user: new Types.ObjectId(createdUser._id),
-    });
+    // return await this.investorModel.create({
+    //   ...investor,
+    //   user: new Types.ObjectId(createdUser._id),
+    // });
   }
 }

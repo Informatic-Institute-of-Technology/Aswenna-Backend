@@ -1,4 +1,9 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  forwardRef,
+  Inject,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { FilterQuery, Model, Types } from 'mongoose';
 import * as bcrypt from 'bcrypt';
@@ -9,12 +14,14 @@ import {
   ResponseType,
 } from 'src/common/interfaces/response.types';
 import { RoleService } from '../role/role.service';
+import { FarmerService } from '../farmer/farmer.service';
 
 const T = {
   duplicateUserFoundByEmail: 'User with this email already exists',
   userNotFoundById: (id: string) => `User with ID ${id} not found`,
   roleAlreadyAssigned: 'Role already assigned to user',
   roleNotAssigned: 'Role not assigned to user',
+  roleNotFound: (role: string) => `Role ${role} not found`,
 };
 
 @Injectable()
@@ -22,6 +29,8 @@ export class UserService {
   constructor(
     @InjectModel(User.name) private readonly userModel: Model<User>,
     private readonly roleService: RoleService,
+    @Inject(forwardRef(() => FarmerService))
+    private readonly farmerService: FarmerService,
   ) {}
 
   async findAll(
@@ -92,13 +101,27 @@ export class UserService {
 
     const hashedPassword = await bcrypt.hash(user.password, 10);
 
-    if (user.role) await this.roleService.findById(user.role);
+    const role = await this.roleService.findByName(user.role);
+    if (!role) throw new BadRequestException(T.roleNotFound(user.role));
 
-    return await this.userModel.create({
+    const createdUser = await this.userModel.create({
       ...user,
       password: hashedPassword,
-      ...(user.role ? { role: new Types.ObjectId(user.role) } : {}),
+      personalInfo: {
+        ...user.personalInfo,
+        birthday: user.personalInfo.birthday
+          ? new Date(user.personalInfo.birthday)
+          : null,
+      },
+      ...(role ? { role: new Types.ObjectId(role._id) } : {}),
     });
+
+    await this.farmerService.create({
+      user: createdUser._id.toString(),
+      ...user.farmerDetails,
+    });
+
+    return createdUser;
   }
 
   async findByEmailWithPassword(email: string): Promise<User | null> {

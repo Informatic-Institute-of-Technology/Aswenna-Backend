@@ -22,11 +22,11 @@ export class LandOwnerService {
         'Role must be land owner to create land owner profile',
       );
 
-    const createdUser = await this.userService.create(landOwner);
+    // const createdUser = await this.userService.create(landOwner);
 
     return await this.landOwnerModel.create({
       ...landOwner,
-      user: new Types.ObjectId(createdUser._id),
+      // user: new Types.ObjectId(createdUser._id),
     });
   }
 }

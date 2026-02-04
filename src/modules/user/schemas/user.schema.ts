@@ -4,6 +4,35 @@ import { Meta } from 'src/common/schemas/meta.schema';
 import { Permission } from 'src/modules/permission/schemas/permission.schema';
 import { Role } from 'src/modules/role/schemas/role.schema';
 
+export class PersonalInfo {
+  @Prop({ default: null })
+  readonly profilePicture?: string;
+
+  @Prop()
+  readonly nicNumber: string;
+
+  @Prop()
+  readonly birthday: Date;
+
+  @Prop()
+  readonly gender: string;
+
+  @Prop()
+  readonly age: number;
+
+  @Prop()
+  readonly province: string;
+
+  @Prop()
+  readonly district: string;
+
+  @Prop()
+  readonly postalCode: string;
+
+  @Prop()
+  readonly address: string;
+}
+
 @Schema({ timestamps: true })
 export class User extends Document {
   declare readonly _id: Types.ObjectId;
@@ -11,16 +40,13 @@ export class User extends Document {
   @Prop()
   readonly fullName: string;
 
-  @Prop()
-  readonly nicNumber: string;
-
-  @Prop()
+  @Prop({ unique: true, sparse: true })
   readonly email: string;
 
   @Prop({ default: false })
   readonly emailVerified: boolean;
 
-  @Prop()
+  @Prop({ unique: true, sparse: true })
   readonly phoneNumber: string;
 
   @Prop({ default: false })
@@ -29,8 +55,14 @@ export class User extends Document {
   @Prop({ select: false })
   readonly password: string;
 
+  @Prop({ type: PersonalInfo, default: () => ({}) })
+  readonly personalInfo: PersonalInfo;
+
+  @Prop({ default: false })
+  readonly termsAccepted: boolean;
+
   @Prop()
-  readonly profilePicture: string;
+  readonly termsAcceptedAt: Date;
 
   @Prop({ type: Types.ObjectId, ref: Role.name })
   readonly role: Role;
