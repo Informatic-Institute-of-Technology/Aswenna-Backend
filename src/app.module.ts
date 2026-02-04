@@ -9,6 +9,7 @@ import { PermissionModule } from './modules/permission/permission.module';
 import { InvestorModule } from './modules/investor/investor.module';
 import { FarmerModule } from './modules/farmer/farmer.module';
 import { LandOwnerModule } from './modules/land-owner/land-owner.module';
+import { RequestModule } from './modules/request/request.module';
 
 @Module({
   imports: [
@@ -22,6 +23,7 @@ import { LandOwnerModule } from './modules/land-owner/land-owner.module';
     InvestorModule,
     FarmerModule,
     LandOwnerModule,
+    RequestModule,
   ],
 })
 export class AppModule {}
