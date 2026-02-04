@@ -12,12 +12,15 @@ import { LandOwnerModule } from './modules/land-owner/land-owner.module';
 import { RequestModule } from './modules/request/request.module';
 import { CreateAddsModule } from './modules/create-adds/create-adds.module';
 import { NotificationModule } from './common/notification/notification.module';
+import { OtpModule } from './modules/otp/otp.module';
+import { MailModule } from './config/mail/mail.module';
 
 @Module({
   imports: [
     ConfigModule,
     JwtConfigModule,
     DatabaseModule,
+    OtpModule,
     HealthModule,
     UserModule,
     AuthModule,
@@ -28,6 +31,7 @@ import { NotificationModule } from './common/notification/notification.module';
     RequestModule,
     CreateAddsModule,
     NotificationModule,
+    MailModule,
   ],
 })
 export class AppModule {}

@@ -1,28 +1,13 @@
+import { MailerService } from '@nestjs-modules/mailer/dist/mailer.service';
 import { Injectable, Logger } from '@nestjs/common';
-import * as nodemailer from 'nodemailer';
 
 @Injectable()
 export class NotificationService {
-  private transporter;
+  constructor(private readonly mailerService: MailerService) {}
 
-  constructor() {
-    this.transporter = nodemailer.createTransport({
-      host: process.env.MAIL_HOST,
-      port: Number(process.env.MAIL_PORT),
-      auth: {
-        user: process.env.MAIL_USER,
-        pass: process.env.MAIL_PASSWORD,
-      },
-    });
-  }
-
-  async sendEmail(
-    to: string,
-    subject: string,
-    message: string,
-  ): Promise<void> {
+  async sendEmail(to: string, subject: string, message: string): Promise<void> {
     try {
-      await this.transporter.sendMail({
+      await this.mailerService.sendMail({
         from: '"Aswenna System" <no-reply@aswenna.lk>',
         to,
         subject,
@@ -31,7 +16,11 @@ export class NotificationService {
 
       Logger.log(`Email sent to ${to}`, 'NotificationService');
     } catch (error) {
-      Logger.error('Email sending failed', error);
+      Logger.error('Email sending failed', error, 'NotificationService');
     }
+  }
+
+  async sendSms(phone: string, message: string): Promise<void> {
+    Logger.log(`SMS sent to ${phone}: ${message}`, 'NotificationService');
   }
 }
