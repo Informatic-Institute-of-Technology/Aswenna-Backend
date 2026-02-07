@@ -17,6 +17,15 @@ export class Farmer extends Document {
   readonly gnDivision: string;
 
   @Prop()
+  readonly govijanaSevaId: string;
+
+  @Prop()
+  readonly GovijanaSevaPassbookImage: string;
+
+  @Prop()
+  readonly gnCertificateImage: string;
+
+  @Prop()
   readonly crop: string;
 
   @Prop()

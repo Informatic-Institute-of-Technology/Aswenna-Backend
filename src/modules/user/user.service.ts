@@ -113,13 +113,14 @@ export class UserService {
           ? new Date(user.personalInfo.birthday)
           : null,
       },
-      ...(role ? { role: new Types.ObjectId(role._id) } : {}),
+      role: new Types.ObjectId(role._id),
     });
 
-    await this.farmerService.create({
-      user: createdUser._id.toString(),
-      ...user.farmerDetails,
-    });
+    if (role.name.toLowerCase() === 'farmer' && user.farmerDetails)
+      await this.farmerService.create({
+        user: createdUser._id.toString(),
+        ...user.farmerDetails,
+      });
 
     return createdUser;
   }

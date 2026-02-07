@@ -8,11 +8,16 @@ export interface PersonalInfoI {
   readonly district: string;
   readonly postalCode: string;
   readonly address: string;
+  readonly nicFrontImage: string;
+  readonly nicBackImage: string;
 }
 
 export interface FarmerDetailsI {
   readonly dsDivision: string;
   readonly gnDivision: string;
+  readonly govijanaSevaId: string;
+  readonly GovijanaSevaPassbookImage: string;
+  readonly gnCertificateImage: string;
   readonly crop: string;
   readonly experience: string;
   readonly regions: string;

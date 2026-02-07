@@ -31,6 +31,12 @@ export class PersonalInfo {
 
   @Prop()
   readonly address: string;
+
+  @Prop()
+  readonly nicFrontImage: string;
+
+  @Prop()
+  readonly nicBackImage: string;
 }
 
 @Schema({ timestamps: true })

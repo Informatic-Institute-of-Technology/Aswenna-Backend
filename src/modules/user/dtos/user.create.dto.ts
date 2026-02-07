@@ -13,6 +13,7 @@ import {
   Min,
   Max,
   ValidateNested,
+  ValidateIf,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -41,11 +42,7 @@ export class PersonalInfoDto {
 
   @IsNotEmpty()
   @IsString()
-  readonly province: string;
-
-  @IsNotEmpty()
-  @IsString()
-  readonly district: string;
+  readonly address: string;
 
   @IsNotEmpty()
   @IsString()
@@ -53,7 +50,19 @@ export class PersonalInfoDto {
 
   @IsNotEmpty()
   @IsString()
-  readonly address: string;
+  readonly district: string;
+
+  @IsNotEmpty()
+  @IsString()
+  readonly province: string;
+
+  @IsNotEmpty()
+  @IsString()
+  readonly nicFrontImage: string;
+
+  @IsNotEmpty()
+  @IsString()
+  readonly nicBackImage: string;
 }
 
 export class FarmerDetailsDto {
@@ -64,6 +73,18 @@ export class FarmerDetailsDto {
   @IsNotEmpty()
   @IsString()
   readonly gnDivision: string;
+
+  @IsNotEmpty()
+  @IsString()
+  readonly govijanaSevaId: string;
+
+  @IsNotEmpty()
+  @IsString()
+  readonly GovijanaSevaPassbookImage: string;
+
+  @IsNotEmpty()
+  @IsString()
+  readonly gnCertificateImage: string;
 
   @IsNotEmpty()
   @IsString()
@@ -114,11 +135,12 @@ export class UserCreateDto {
   @Type(() => PersonalInfoDto)
   readonly personalInfo: PersonalInfoDto;
 
-  @IsOptional()
+  @IsNotEmpty()
   @IsString()
   readonly role: string;
 
-  @IsOptional()
+  @ValidateIf((o: UserCreateDto) => o.role.toLowerCase() === 'farmer')
+  @IsNotEmpty()
   @ValidateNested()
   @Type(() => FarmerDetailsDto)
   readonly farmerDetails: FarmerDetailsDto;
