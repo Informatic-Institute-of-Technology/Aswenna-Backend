@@ -6,6 +6,7 @@ import { User, UserSchema } from './schemas/user.schema';
 import { RoleModule } from '../role/role.module';
 import { FarmerModule } from '../farmer/farmer.module';
 import { InvestorModule } from '../investor/investor.module';
+import { LandOwnerModule } from '../land-owner/land-owner.module';
 
 @Module({
   imports: [
@@ -13,6 +14,7 @@ import { InvestorModule } from '../investor/investor.module';
     RoleModule,
     forwardRef(() => FarmerModule),
     forwardRef(() => InvestorModule),
+    forwardRef(() => LandOwnerModule),
   ],
   controllers: [UserController],
   providers: [UserService],

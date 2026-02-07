@@ -35,6 +35,32 @@ export interface InvestorDetailsI {
   readonly cropFocus: string;
 }
 
+export interface LandOwnerLocationI {
+  readonly latitude: number;
+  readonly longitude: number;
+}
+
+export interface LandAddressI {
+  readonly street: string;
+  readonly city: string;
+  readonly province: string;
+  readonly district: string;
+  readonly postalCode: string;
+  readonly size: string;
+  readonly soilType: string;
+  readonly rentalExpectation: string;
+  readonly dsDivision: string;
+  readonly gnDivision: string;
+  readonly landImages: string[];
+}
+
+export interface LandOwnerDetailsI {
+  readonly dsDivision: string;
+  readonly gnDivision: string;
+  readonly location: LandOwnerLocationI;
+  readonly landAddress: LandAddressI;
+}
+
 export interface UserCreateI {
   readonly fullName: string;
   readonly email: string;
@@ -46,6 +72,7 @@ export interface UserCreateI {
   readonly role: string;
   readonly farmerDetails?: FarmerDetailsI;
   readonly investorDetails?: InvestorDetailsI;
+  readonly landOwnerDetails?: LandOwnerDetailsI;
 }
 
 export interface UserUpdateI {

@@ -14,6 +14,7 @@ import {
   Max,
   ValidateNested,
   ValidateIf,
+  IsArray,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
@@ -137,6 +138,87 @@ export class InvestorDetailsDto {
   readonly cropFocus: string;
 }
 
+export class LandOwnerLocationDto {
+  @IsNotEmpty()
+  @IsNumber()
+  @Min(-90)
+  @Max(90)
+  readonly latitude: number;
+
+  @IsNotEmpty()
+  @IsNumber()
+  @Min(-180)
+  @Max(180)
+  readonly longitude: number;
+}
+
+export class LandAddressDto {
+  @IsNotEmpty()
+  @IsString()
+  readonly street: string;
+
+  @IsNotEmpty()
+  @IsString()
+  readonly city: string;
+
+  @IsNotEmpty()
+  @IsString()
+  readonly province: string;
+
+  @IsNotEmpty()
+  @IsString()
+  readonly district: string;
+
+  @IsNotEmpty()
+  @IsString()
+  readonly postalCode: string;
+
+  @IsNotEmpty()
+  @IsString()
+  readonly size: string;
+
+  @IsNotEmpty()
+  @IsString()
+  readonly soilType: string;
+
+  @IsNotEmpty()
+  @IsString()
+  readonly rentalExpectation: string;
+
+  @IsNotEmpty()
+  @IsString()
+  readonly dsDivision: string;
+
+  @IsNotEmpty()
+  @IsString()
+  readonly gnDivision: string;
+
+  @IsNotEmpty()
+  @IsArray()
+  @IsString({ each: true })
+  readonly landImages: string[];
+}
+
+export class LandOwnerDetailsDto {
+  @IsNotEmpty()
+  @IsString()
+  readonly dsDivision: string;
+
+  @IsNotEmpty()
+  @IsString()
+  readonly gnDivision: string;
+
+  @IsNotEmpty()
+  @ValidateNested()
+  @Type(() => LandOwnerLocationDto)
+  readonly location: LandOwnerLocationDto;
+
+  @IsNotEmpty()
+  @ValidateNested()
+  @Type(() => LandAddressDto)
+  readonly landAddress: LandAddressDto;
+}
+
 export class UserCreateDto {
   @IsString()
   @IsNotEmpty()
@@ -184,4 +266,10 @@ export class UserCreateDto {
   @ValidateNested()
   @Type(() => InvestorDetailsDto)
   readonly investorDetails: InvestorDetailsDto;
+
+  @ValidateIf((o: UserCreateDto) => o.role.toLowerCase() === 'landowner')
+  @IsNotEmpty()
+  @ValidateNested()
+  @Type(() => LandOwnerDetailsDto)
+  readonly landOwnerDetails: LandOwnerDetailsDto;
 }

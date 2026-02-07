@@ -3,6 +3,51 @@ import { Document, Types } from 'mongoose';
 import { User } from 'src/modules/user/schemas/user.schema';
 import { Meta } from 'src/common/schemas/meta.schema';
 
+@Schema({ _id: false })
+export class LandOwnerLocation {
+  @Prop()
+  readonly latitude: number;
+
+  @Prop()
+  readonly longitude: number;
+}
+
+@Schema({ _id: false })
+export class LandAddress {
+  @Prop()
+  readonly street: string;
+
+  @Prop()
+  readonly city: string;
+
+  @Prop()
+  readonly province: string;
+
+  @Prop()
+  readonly district: string;
+
+  @Prop()
+  readonly postalCode: string;
+
+  @Prop()
+  readonly size: string;
+
+  @Prop()
+  readonly soilType: string;
+
+  @Prop()
+  readonly rentalExpectation: string;
+
+  @Prop()
+  readonly dsDivision: string;
+
+  @Prop()
+  readonly gnDivision: string;
+
+  @Prop([String])
+  readonly landImages: string[];
+}
+
 @Schema({ timestamps: true })
 export class LandOwner extends Document {
   declare readonly _id: Types.ObjectId;
@@ -11,16 +56,16 @@ export class LandOwner extends Document {
   readonly user: User;
 
   @Prop()
-  readonly location: string;
+  readonly dsDivision: string;
 
   @Prop()
-  readonly size: string;
+  readonly gnDivision: string;
 
-  @Prop()
-  readonly sail: string;
+  @Prop({ type: LandOwnerLocation })
+  readonly location: LandOwnerLocation;
 
-  @Prop()
-  readonly expectation: string;
+  @Prop({ type: LandAddress })
+  readonly landAddress: LandAddress;
 
   @Prop([Meta])
   readonly meta: Meta[];
