@@ -5,6 +5,7 @@ export interface PersonalInfoI {
   readonly gender: string;
   readonly age: number;
   readonly province: string;
+  readonly city: string;
   readonly district: string;
   readonly postalCode: string;
   readonly address: string;
@@ -24,6 +25,16 @@ export interface FarmerDetailsI {
   readonly specificNeeds: string;
 }
 
+export interface InvestorDetailsI {
+  readonly dsDivision: string;
+  readonly gnDivision: string;
+  readonly organizationName: string;
+  readonly companyAddress: string;
+  readonly organizationPhoneNumber: string;
+  readonly registrationNo: string;
+  readonly cropFocus: string;
+}
+
 export interface UserCreateI {
   readonly fullName: string;
   readonly email: string;
@@ -33,7 +44,8 @@ export interface UserCreateI {
   readonly password: string;
   readonly personalInfo: PersonalInfoI;
   readonly role: string;
-  readonly farmerDetails: FarmerDetailsI;
+  readonly farmerDetails?: FarmerDetailsI;
+  readonly investorDetails?: InvestorDetailsI;
 }
 
 export interface UserUpdateI {

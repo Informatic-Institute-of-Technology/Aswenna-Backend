@@ -50,6 +50,10 @@ export class PersonalInfoDto {
 
   @IsNotEmpty()
   @IsString()
+  readonly city: string;
+
+  @IsNotEmpty()
+  @IsString()
   readonly district: string;
 
   @IsNotEmpty()
@@ -103,6 +107,36 @@ export class FarmerDetailsDto {
   readonly specificNeeds: string;
 }
 
+export class InvestorDetailsDto {
+  @IsNotEmpty()
+  @IsString()
+  readonly dsDivision: string;
+
+  @IsNotEmpty()
+  @IsString()
+  readonly gnDivision: string;
+
+  @IsNotEmpty()
+  @IsString()
+  readonly organizationName: string;
+
+  @IsNotEmpty()
+  @IsString()
+  readonly companyAddress: string;
+
+  @IsNotEmpty()
+  @IsPhoneNumber()
+  readonly organizationPhoneNumber: string;
+
+  @IsNotEmpty()
+  @IsString()
+  readonly registrationNo: string;
+
+  @IsNotEmpty()
+  @IsString()
+  readonly cropFocus: string;
+}
+
 export class UserCreateDto {
   @IsString()
   @IsNotEmpty()
@@ -144,4 +178,10 @@ export class UserCreateDto {
   @ValidateNested()
   @Type(() => FarmerDetailsDto)
   readonly farmerDetails: FarmerDetailsDto;
+
+  @ValidateIf((o: UserCreateDto) => o.role.toLowerCase() === 'investor')
+  @IsNotEmpty()
+  @ValidateNested()
+  @Type(() => InvestorDetailsDto)
+  readonly investorDetails: InvestorDetailsDto;
 }

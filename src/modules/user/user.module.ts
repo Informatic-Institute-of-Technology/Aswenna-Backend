@@ -5,12 +5,14 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { User, UserSchema } from './schemas/user.schema';
 import { RoleModule } from '../role/role.module';
 import { FarmerModule } from '../farmer/farmer.module';
+import { InvestorModule } from '../investor/investor.module';
 
 @Module({
   imports: [
     MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
     RoleModule,
     forwardRef(() => FarmerModule),
+    forwardRef(() => InvestorModule),
   ],
   controllers: [UserController],
   providers: [UserService],

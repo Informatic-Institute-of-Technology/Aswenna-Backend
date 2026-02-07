@@ -15,6 +15,7 @@ import {
 } from 'src/common/interfaces/response.types';
 import { RoleService } from '../role/role.service';
 import { FarmerService } from '../farmer/farmer.service';
+import { InvestorService } from '../investor/investor.service';
 
 const T = {
   duplicateUserFoundByEmail: 'User with this email already exists',
@@ -31,6 +32,8 @@ export class UserService {
     private readonly roleService: RoleService,
     @Inject(forwardRef(() => FarmerService))
     private readonly farmerService: FarmerService,
+    @Inject(forwardRef(() => InvestorService))
+    private readonly investorService: InvestorService,
   ) {}
 
   async findAll(
@@ -120,6 +123,12 @@ export class UserService {
       await this.farmerService.create({
         user: createdUser._id.toString(),
         ...user.farmerDetails,
+      });
+
+    if (role.name.toLowerCase() === 'investor' && user.investorDetails)
+      await this.investorService.create({
+        user: createdUser._id.toString(),
+        ...user.investorDetails,
       });
 
     return createdUser;

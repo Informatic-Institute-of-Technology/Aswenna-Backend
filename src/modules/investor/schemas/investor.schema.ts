@@ -11,16 +11,25 @@ export class Investor extends Document {
   readonly user: User;
 
   @Prop()
-  readonly organization: string;
+  readonly dsDivision: string;
 
   @Prop()
-  readonly crop: string;
+  readonly gnDivision: string;
 
   @Prop()
-  readonly timeline: string;
+  readonly organizationName: string;
 
   @Prop()
-  readonly specificNeeds: string;
+  readonly companyAddress: string;
+
+  @Prop()
+  readonly organizationPhoneNumber: string;
+
+  @Prop()
+  readonly registrationNo: string;
+
+  @Prop()
+  readonly cropFocus: string;
 
   @Prop([Meta])
   readonly meta: Meta[];
