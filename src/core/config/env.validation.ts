@@ -23,4 +23,9 @@ export const validationSchema = Joi.object({
   EMAIL_PORT: Joi.number().default(2525),
   EMAIL_USER: Joi.string().allow(''),
   EMAIL_PASS: Joi.string().allow(''),
+
+  // Azure Storage
+  AZURE_STORAGE_ACCOUNT_NAME: Joi.string().required(),
+  AZURE_STORAGE_ACCOUNT_KEY: Joi.string().required(),
+  AZURE_STORAGE_CONTAINER_NAME: Joi.string().default('files'),
 });

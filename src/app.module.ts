@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { ConfigModule } from './core/config/config.module';
 import { JwtConfigModule } from './config/jwt/jwt.module';
 import { DatabaseModule } from './config/database/database.module';
+import { AzureConfigModule } from './config/azure/azure.module';
 import { HealthModule } from './core/health/health.module';
 import { UserModule } from './modules/user/user.module';
 import { AuthModule } from './modules/auth/auth.module';
@@ -14,12 +15,14 @@ import { CreateAddsModule } from './modules/create-adds/create-adds.module';
 import { OtpModule } from './modules/otp/otp.module';
 import { MailModule } from './config/mail/mail.module';
 import { NotificationModule } from './modules/notification/notification.module';
+import { FileUploadModule } from './modules/file-upload/file-upload.module';
 
 @Module({
   imports: [
     ConfigModule,
     JwtConfigModule,
     DatabaseModule,
+    AzureConfigModule,
     OtpModule,
     HealthModule,
     UserModule,
@@ -32,6 +35,7 @@ import { NotificationModule } from './modules/notification/notification.module';
     CreateAddsModule,
     NotificationModule,
     MailModule,
+    FileUploadModule,
   ],
 })
 export class AppModule {}

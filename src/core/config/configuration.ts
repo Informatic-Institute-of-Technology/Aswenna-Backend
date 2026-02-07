@@ -25,4 +25,9 @@ export default () => ({
     user: process.env.EMAIL_USER || '',
     pass: process.env.EMAIL_PASS || '',
   },
+  azure: {
+    storageAccountName: process.env.AZURE_STORAGE_ACCOUNT_NAME,
+    storageAccountKey: process.env.AZURE_STORAGE_ACCOUNT_KEY,
+    containerName: process.env.AZURE_STORAGE_CONTAINER_NAME || 'files',
+  },
 });
