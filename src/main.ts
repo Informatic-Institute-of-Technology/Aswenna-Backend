@@ -14,14 +14,17 @@ async function bootstrap() {
     new ValidationPipe({
       whitelist: true,
       transform: true,
-      forbidNonWhitelisted: true,
     }),
   );
   app.enableVersioning({
     type: VersioningType.URI,
   });
   app.setGlobalPrefix(globalPrefix);
-  app.enableCors();
+  app.enableCors({
+    origin: true,
+    credentials: true,
+  });
+
   await app.listen(port);
 
   Logger.log(
