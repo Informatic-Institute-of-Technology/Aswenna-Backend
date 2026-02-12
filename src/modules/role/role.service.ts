@@ -75,7 +75,9 @@ export class RoleService {
   }
 
   async findByName(name: string): Promise<Role | null> {
-    return await this.roleModel.findOne({ name }).exec();
+    return await this.roleModel
+      .findOne({ name: { $regex: name, $options: 'i' } })
+      .exec();
   }
 
   async create(role: RoleCreateI): Promise<Role> {

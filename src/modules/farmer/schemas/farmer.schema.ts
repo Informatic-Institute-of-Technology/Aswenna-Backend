@@ -11,10 +11,25 @@ export class Farmer extends Document {
   readonly user: User;
 
   @Prop()
-  readonly experience: string;
+  readonly dsDivision: string;
+
+  @Prop()
+  readonly gnDivision: string;
+
+  @Prop()
+  readonly govijanaSevaId: string;
+
+  @Prop()
+  readonly GovijanaSevaPassbookImage: string;
+
+  @Prop()
+  readonly gnCertificateImage: string;
 
   @Prop()
   readonly crop: string;
+
+  @Prop()
+  readonly experience: string;
 
   @Prop()
   readonly regions: string;

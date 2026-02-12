@@ -6,8 +6,8 @@ import { InvestorCreateDto } from './dtos/create-investor.dto';
 export class InvestorController {
   constructor(private readonly investorService: InvestorService) {}
 
-  @Post()
-  create(@Body() investor: InvestorCreateDto) {
-    return this.investorService.create(investor);
-  }
+  // @Post()
+  // create(@Body() investor: InvestorCreateDto) {
+  //   return this.investorService.create(investor);
+  // }
 }
