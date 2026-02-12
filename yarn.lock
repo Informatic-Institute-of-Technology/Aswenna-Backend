@@ -76,7 +76,7 @@
     "@azure/core-util" "^1.13.0"
     tslib "^2.6.2"
 
-"@azure/core-client@^1.10.0", "@azure/core-client@^1.9.3":
+"@azure/core-client@^1.9.3":
   version "1.10.1"
   resolved "https://registry.yarnpkg.com/@azure/core-client/-/core-client-1.10.1.tgz#83d78f97d647ab22e6811a7a68bb4223e7a1d019"
   integrity sha512-Nh5PhEOeY6PrnxNPsEHRr9eimxLwgLlpmguQaHKBinFYA/RU9+kOYVOQqOrTsCL+KSxrLLl1gD8Dk5BFW/7l/w==
@@ -90,13 +90,11 @@
     tslib "^2.6.2"
 
 "@azure/core-http-compat@^2.2.0":
-  version "2.3.1"
-  resolved "https://registry.yarnpkg.com/@azure/core-http-compat/-/core-http-compat-2.3.1.tgz#2182e39a31c062800d4e3ad69bcf0109d87713dc"
-  integrity sha512-az9BkXND3/d5VgdRRQVkiJb2gOmDU8Qcq4GvjtBmDICNiQ9udFmDk4ZpSB5Qq1OmtDJGlQAfBaS4palFsazQ5g==
+  version "2.3.2"
+  resolved "https://registry.yarnpkg.com/@azure/core-http-compat/-/core-http-compat-2.3.2.tgz#bb50e23e8f36ec31b582b2d161925c0d29e75b03"
+  integrity sha512-Tf6ltdKzOJEgxZeWLCjMxrxbodB/ZeCbzzA1A2qHbhzAjzjHoBVSUeSl/baT/oHAxhc4qdqVaDKnc2+iE932gw==
   dependencies:
     "@azure/abort-controller" "^2.1.2"
-    "@azure/core-client" "^1.10.0"
-    "@azure/core-rest-pipeline" "^1.22.0"
 
 "@azure/core-lro@^2.2.0":
   version "2.7.2"
@@ -160,10 +158,10 @@
     "@typespec/ts-http-runtime" "^0.3.0"
     tslib "^2.6.2"
 
-"@azure/storage-blob@^12.30.0":
-  version "12.30.0"
-  resolved "https://registry.yarnpkg.com/@azure/storage-blob/-/storage-blob-12.30.0.tgz#e7abd8ddca42f93a2b0cedb5303fead323c8d80d"
-  integrity sha512-peDCR8blSqhsAKDbpSP/o55S4sheNwSrblvCaHUZ5xUI73XA7ieUGGwrONgD/Fng0EoDe1VOa3fAQ7+WGB3Ocg==
+"@azure/storage-blob@^12.31.0":
+  version "12.31.0"
+  resolved "https://registry.yarnpkg.com/@azure/storage-blob/-/storage-blob-12.31.0.tgz#97b09be2bf6ab59739b862edd8124798362ce720"
+  integrity sha512-DBgNv10aCSxopt92DkTDD0o9xScXeBqPKGmR50FPZQaEcH4JLQ+GEOGEDv19V5BMkB7kxr+m4h6il/cCDPvmHg==
   dependencies:
     "@azure/abort-controller" "^2.1.2"
     "@azure/core-auth" "^1.9.0"
@@ -176,11 +174,11 @@
     "@azure/core-util" "^1.11.0"
     "@azure/core-xml" "^1.4.5"
     "@azure/logger" "^1.1.4"
-    "@azure/storage-common" "^12.2.0"
+    "@azure/storage-common" "^12.3.0"
     events "^3.0.0"
     tslib "^2.8.1"
 
-"@azure/storage-common@^12.2.0":
+"@azure/storage-common@^12.3.0":
   version "12.3.0"
   resolved "https://registry.yarnpkg.com/@azure/storage-common/-/storage-common-12.3.0.tgz#5bf257383836e67a426c91d7e9678479afe802a9"
   integrity sha512-/OFHhy86aG5Pe8dP5tsp+BuJ25JOAl9yaMU3WZbkeoiFMHFtJ7tu5ili7qEdBXNW9G5lDB19trwyI6V49F/8iQ==
@@ -1831,9 +1829,9 @@
     eslint-visitor-keys "^4.2.1"
 
 "@typespec/ts-http-runtime@^0.3.0":
-  version "0.3.2"
-  resolved "https://registry.yarnpkg.com/@typespec/ts-http-runtime/-/ts-http-runtime-0.3.2.tgz#1048df6182b02bec8962a9cffd1c5ee1a129541f"
-  integrity sha512-IlqQ/Gv22xUC1r/WQm4StLkYQmaaTsXAhUVsNE0+xiyf0yRFiH5++q78U3bw6bLKDCTmh0uqKB9eG9+Bt75Dkg==
+  version "0.3.3"
+  resolved "https://registry.yarnpkg.com/@typespec/ts-http-runtime/-/ts-http-runtime-0.3.3.tgz#62767b88df3ba7fc53bfd66a94c88dfe1dec55bc"
+  integrity sha512-91fp6CAAJSRtH5ja95T1FHSKa8aPW9/Zw6cta81jlZTUw/+Vq8jM/AfF/14h2b71wwR84JUTW/3Y8QPhDAawFA==
   dependencies:
     http-proxy-agent "^7.0.0"
     https-proxy-agent "^7.0.0"
@@ -3541,11 +3539,11 @@ fast-uri@^3.0.1:
   integrity sha512-iPeeDKJSWf4IEOasVVrknXpaBV0IApz/gp7S2bb7Z4Lljbl2MGJRqInZiUrQwV16cpzw/D3S5j5Julj/gT52AA==
 
 fast-xml-parser@^5.0.7:
-  version "5.3.4"
-  resolved "https://registry.yarnpkg.com/fast-xml-parser/-/fast-xml-parser-5.3.4.tgz#06f39aafffdbc97bef0321e626c7ddd06a043ecf"
-  integrity sha512-EFd6afGmXlCx8H8WTZHhAoDaWaGyuIBoZJ2mknrNxug+aZKjkp0a0dlars9Izl+jF+7Gu1/5f/2h68cQpe0IiA==
+  version "5.3.5"
+  resolved "https://registry.yarnpkg.com/fast-xml-parser/-/fast-xml-parser-5.3.5.tgz#3e914cb852e636923cb555deaa356f7366e18b49"
+  integrity sha512-JeaA2Vm9ffQKp9VjvfzObuMCjUYAp5WDYhRYL5LrBPY/jUDlUtOvDfot0vKSkB9tuX885BDHjtw4fZadD95wnA==
   dependencies:
-    strnum "^2.1.0"
+    strnum "^2.1.2"
 
 fb-watchman@^2.0.2:
   version "2.0.2"
@@ -6631,7 +6629,7 @@ strip-json-comments@~2.0.1:
   resolved "https://registry.yarnpkg.com/strip-json-comments/-/strip-json-comments-2.0.1.tgz#3c531942e908c2697c0ec344858c286c7ca0a60a"
   integrity sha512-4gB8na07fecVVkOI6Rs4e7T6NOTki5EmL7TUduTs6bu3EdnSycntVJ4re8kgZA+wx9IueI2Y11bfbgwtzuE0KQ==
 
-strnum@^2.1.0:
+strnum@^2.1.2:
   version "2.1.2"
   resolved "https://registry.yarnpkg.com/strnum/-/strnum-2.1.2.tgz#a5e00ba66ab25f9cafa3726b567ce7a49170937a"
   integrity sha512-l63NF9y/cLROq/yqKXSLtcMeeyOfnSQlfMSlzFt/K73oIaD8DGaQWd7Z34X9GPiKqP5rbSh84Hl4bOlLcjiSrQ==
