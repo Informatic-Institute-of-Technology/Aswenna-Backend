@@ -1,4 +1,9 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  forwardRef,
+  Inject,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { FilterQuery, Model, Types } from 'mongoose';
 import * as bcrypt from 'bcrypt';
@@ -9,12 +14,16 @@ import {
   ResponseType,
 } from 'src/common/interfaces/response.types';
 import { RoleService } from '../role/role.service';
+import { FarmerService } from '../farmer/farmer.service';
+import { InvestorService } from '../investor/investor.service';
+import { LandOwnerService } from '../land-owner/land-owner.service';
 
 const T = {
   duplicateUserFoundByEmail: 'User with this email already exists',
   userNotFoundById: (id: string) => `User with ID ${id} not found`,
   roleAlreadyAssigned: 'Role already assigned to user',
   roleNotAssigned: 'Role not assigned to user',
+  roleNotFound: (role: string) => `Role ${role} not found`,
 };
 
 @Injectable()
@@ -22,6 +31,12 @@ export class UserService {
   constructor(
     @InjectModel(User.name) private readonly userModel: Model<User>,
     private readonly roleService: RoleService,
+    @Inject(forwardRef(() => FarmerService))
+    private readonly farmerService: FarmerService,
+    @Inject(forwardRef(() => InvestorService))
+    private readonly investorService: InvestorService,
+    @Inject(forwardRef(() => LandOwnerService))
+    private readonly landOwnerService: LandOwnerService,
   ) {}
 
   async findAll(
@@ -92,13 +107,40 @@ export class UserService {
 
     const hashedPassword = await bcrypt.hash(user.password, 10);
 
-    if (user.role) await this.roleService.findById(user.role);
+    const role = await this.roleService.findByName(user.role);
+    if (!role) throw new BadRequestException(T.roleNotFound(user.role));
 
-    return await this.userModel.create({
+    const createdUser = await this.userModel.create({
       ...user,
       password: hashedPassword,
-      ...(user.role ? { role: new Types.ObjectId(user.role) } : {}),
+      personalInfo: {
+        ...user.personalInfo,
+        birthday: user.personalInfo.birthday
+          ? new Date(user.personalInfo.birthday)
+          : null,
+      },
+      role: new Types.ObjectId(role._id),
     });
+
+    if (role.name.toLowerCase() === 'farmer' && user.farmerDetails)
+      await this.farmerService.create({
+        user: createdUser._id.toString(),
+        ...user.farmerDetails,
+      });
+
+    if (role.name.toLowerCase() === 'investor' && user.investorDetails)
+      await this.investorService.create({
+        user: createdUser._id.toString(),
+        ...user.investorDetails,
+      });
+
+    if (role.name.toLowerCase() === 'landowner' && user.landOwnerDetails)
+      await this.landOwnerService.create({
+        user: createdUser._id.toString(),
+        ...user.landOwnerDetails,
+      });
+
+    return createdUser;
   }
 
   async findByEmailWithPassword(email: string): Promise<User | null> {

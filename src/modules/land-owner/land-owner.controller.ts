@@ -8,6 +8,6 @@ export class LandOwnerController {
 
   @Post()
   create(@Body() landOwner: LandOwnerCreateDto) {
-    return this.landOwnerService.create(landOwner);
+    // return this.landOwnerService.create(landOwner);
   }
 }

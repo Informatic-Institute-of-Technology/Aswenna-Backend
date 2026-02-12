@@ -1,13 +1,22 @@
 export interface LandOwnerCreateI {
-  readonly fullName: string;
-  readonly address: string;
-  readonly nicNumber: string;
-  readonly email: string;
-  readonly phoneNumber: string;
-  readonly password: string;
-  readonly role: string;
-  readonly location: string;
-  readonly size: string;
-  readonly sail: string;
-  readonly expectation: string;
+  readonly user: string;
+  readonly dsDivision: string;
+  readonly gnDivision: string;
+  readonly location: {
+    readonly latitude: number;
+    readonly longitude: number;
+  };
+  readonly landAddress: {
+    readonly street: string;
+    readonly city: string;
+    readonly province: string;
+    readonly district: string;
+    readonly postalCode: string;
+    readonly size: string;
+    readonly soilType: string;
+    readonly rentalExpectation: string;
+    readonly dsDivision: string;
+    readonly gnDivision: string;
+    readonly landImages: string[];
+  };
 }

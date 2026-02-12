@@ -1,6 +1,5 @@
 import {
   Controller,
-  Post,
   Body,
   Get,
   Patch,
@@ -9,8 +8,6 @@ import {
   Query,
 } from '@nestjs/common';
 import { FarmerService } from './farmer.service';
-import { Public } from 'src/core/decorators/public.decorator';
-import { FarmerCreateDto } from './dtos/farmer.create.dto';
 import { FarmerUpdateDto } from './dtos/farmer.update.dto';
 import { FarmerParamsDto, FarmerQueryDto } from './dtos/farmer.query.dto';
 
@@ -31,12 +28,6 @@ export class FarmerController {
   @Get(':farmer')
   async findById(@Param() params: FarmerParamsDto) {
     return this.farmerService.findById(params.farmer);
-  }
-
-  @Post()
-  @Public()
-  create(@Body() farmer: FarmerCreateDto) {
-    return this.farmerService.create(farmer);
   }
 
   @Patch(':farmer')

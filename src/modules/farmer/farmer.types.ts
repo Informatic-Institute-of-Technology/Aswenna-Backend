@@ -1,13 +1,12 @@
 export interface FarmerCreateI {
-  readonly fullName: string;
-  readonly address: string;
-  readonly nicNumber: string;
-  readonly email: string;
-  readonly phoneNumber: string;
-  readonly password: string;
-  readonly role: string;
-  readonly experience: string;
+  readonly user: string;
+  readonly dsDivision: string;
+  readonly gnDivision: string;
+  readonly govijanaSevaId: string;
+  readonly GovijanaSevaPassbookImage: string;
+  readonly gnCertificateImage: string;
   readonly crop: string;
+  readonly experience: string;
   readonly regions: string;
   readonly specificNeeds: string;
 }

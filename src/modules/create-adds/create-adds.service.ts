@@ -4,8 +4,8 @@ import { Model } from 'mongoose';
 import { LandAdd } from './schemas/land-adds.schema';
 import { CreateAddDto } from './dto/create-add.dto';
 import { UpdateAddDto } from './dto/update-add.dto';
-import { NotificationService } from 'src/common/notification/notification.service';
 import { UserService } from '../user/user.service';
+import { NotificationService } from '../notification/notification.service';
 
 @Injectable()
 export class CreateAddsService {
