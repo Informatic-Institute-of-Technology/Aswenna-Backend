@@ -4,8 +4,9 @@ import { DatabaseModule } from './config/database/database.module';
 import { HealthModule } from './core/health/health.module';
 import { UserModule } from './modules/user/user.module';
 import { AuthModule } from './modules/auth/auth.module';
+import { ChatModule } from './chat/chat.module';
 
 @Module({
-  imports: [ConfigModule, DatabaseModule, HealthModule, UserModule, AuthModule],
+  imports: [ConfigModule, DatabaseModule, HealthModule, UserModule, AuthModule, ChatModule],
 })
 export class AppModule {}
