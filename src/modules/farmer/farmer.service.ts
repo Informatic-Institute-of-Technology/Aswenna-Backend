@@ -104,7 +104,7 @@ export class FarmerService {
   }
 
   async create(farmer: FarmerCreateI): Promise<Farmer> {
-    return await this.farmerModel.create({
+    return this.farmerModel.create({
       ...farmer,
       user: new Types.ObjectId(farmer.user),
     });
@@ -132,7 +132,7 @@ export class FarmerService {
       throw new BadRequestException(T.farmerNotFoundById(target));
 
     if (deletedFarmer.user)
-      await this.userService.deleteById(deletedFarmer.user.toString());
+      await this.userService.deleteById(deletedFarmer.user._id.toString());
 
     return {
       statusCode: 200,

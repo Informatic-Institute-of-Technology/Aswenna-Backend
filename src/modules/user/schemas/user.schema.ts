@@ -1,42 +1,60 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
+import { File } from 'src/common/schemas/file.schema';
 import { Meta } from 'src/common/schemas/meta.schema';
 import { Permission } from 'src/modules/permission/schemas/permission.schema';
 import { Role } from 'src/modules/role/schemas/role.schema';
 
+export enum UserStatus {
+  PENDING = 'PENDING',
+  Active = 'Active',
+  Inactive = 'Inactive',
+  Suspended = 'Suspended',
+}
+
+export enum Gender {
+  Male = 'Male',
+  Female = 'Female',
+  Other = 'Other',
+}
+
+@Schema({ timestamps: false, _id: false })
 export class PersonalInfo {
-  @Prop({ default: null })
-  readonly profilePicture?: string;
+  @Prop(File)
+  readonly profilePicture: File;
 
   @Prop()
   readonly nicNumber: string;
 
-  @Prop()
-  readonly birthday: Date;
+  @Prop({ enum: Gender })
+  readonly gender: Gender;
 
-  @Prop()
-  readonly gender: string;
+  @Prop(Date)
+  readonly birthday: Date;
 
   @Prop()
   readonly age: number;
 
   @Prop()
-  readonly province: string;
+  readonly address: string;
 
   @Prop()
-  readonly district: string;
+  readonly city: string;
+
+  @Prop()
+  readonly province: string;
 
   @Prop()
   readonly postalCode: string;
 
   @Prop()
-  readonly address: string;
+  readonly district: string;
 
-  @Prop()
-  readonly nicFrontImage: string;
+  @Prop(File)
+  readonly nicFrontImage: File;
 
-  @Prop()
-  readonly nicBackImage: string;
+  @Prop(File)
+  readonly nicBackImage: File;
 }
 
 @Schema({ timestamps: true })
@@ -67,8 +85,11 @@ export class User extends Document {
   @Prop({ default: false })
   readonly termsAccepted: boolean;
 
-  @Prop()
+  @Prop(Date)
   readonly termsAcceptedAt: Date;
+
+  @Prop({ enum: UserStatus, default: UserStatus.PENDING })
+  readonly status: UserStatus;
 
   @Prop({ type: Types.ObjectId, ref: Role.name })
   readonly role: Role;

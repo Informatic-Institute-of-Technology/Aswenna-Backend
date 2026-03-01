@@ -122,23 +122,31 @@ export class UserService {
       role: new Types.ObjectId(role._id),
     });
 
-    if (role.name.toLowerCase() === 'farmer' && user.farmerDetails)
-      await this.farmerService.create({
-        user: createdUser._id.toString(),
-        ...user.farmerDetails,
-      });
-
-    if (role.name.toLowerCase() === 'investor' && user.investorDetails)
-      await this.investorService.create({
-        user: createdUser._id.toString(),
-        ...user.investorDetails,
-      });
-
-    if (role.name.toLowerCase() === 'landowner' && user.landOwnerDetails)
-      await this.landOwnerService.create({
-        user: createdUser._id.toString(),
-        ...user.landOwnerDetails,
-      });
+    switch (role.name.toLowerCase()) {
+      case 'farmer':
+        if (user.farmerDetails)
+          await this.farmerService.create({
+            user: createdUser._id.toString(),
+            ...user.farmerDetails,
+          });
+        break;
+      // case 'investor':
+      //   if (user.investorDetails)
+      //     await this.investorService.create({
+      //       user: createdUser._id.toString(),
+      //       ...user.investorDetails,
+      //     });
+      //   break;
+      // case 'landowner':
+      //   if (user.landOwnerDetails)
+      //     await this.landOwnerService.create({
+      //       user: createdUser._id.toString(),
+      //       ...user.landOwnerDetails,
+      //     });
+      // break;
+      default:
+        throw new BadRequestException(T.roleNotFound(user.role));
+    }
 
     return createdUser;
   }

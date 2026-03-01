@@ -1,24 +1,21 @@
+import { Gender } from './schemas/user.schema';
+
 export interface PersonalInfoI {
-  readonly profilePicture: string;
   readonly nicNumber: string;
-  readonly birthday: string | Date;
-  readonly gender: string;
+  readonly gender: Gender;
+  readonly birthday: string;
   readonly age: number;
-  readonly province: string;
-  readonly city: string;
-  readonly district: string;
-  readonly postalCode: string;
   readonly address: string;
-  readonly nicFrontImage: string;
-  readonly nicBackImage: string;
+  readonly postalCode: string;
+  readonly city: string;
+  readonly province: string;
+  readonly district: string;
 }
 
 export interface FarmerDetailsI {
   readonly dsDivision: string;
   readonly gnDivision: string;
   readonly govijanaSevaId: string;
-  readonly GovijanaSevaPassbookImage: string;
-  readonly gnCertificateImage: string;
   readonly crop: string;
   readonly experience: string;
   readonly regions: string;
@@ -71,8 +68,8 @@ export interface UserCreateI {
   readonly personalInfo: PersonalInfoI;
   readonly role: string;
   readonly farmerDetails?: FarmerDetailsI;
-  readonly investorDetails?: InvestorDetailsI;
-  readonly landOwnerDetails?: LandOwnerDetailsI;
+  // readonly investorDetails?: InvestorDetailsI;
+  // readonly landOwnerDetails?: LandOwnerDetailsI;
 }
 
 export interface UserUpdateI {
