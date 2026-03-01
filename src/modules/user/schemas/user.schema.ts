@@ -18,6 +18,14 @@ export enum Gender {
   Other = 'Other',
 }
 
+export enum UserImageTarget {
+  PROFILE_PICTURE = 'profilePicture',
+  NIC_FRONT = 'nicFrontImage',
+  NIC_BACK = 'nicBackImage',
+  GOVIJANA_SEVA_PASSBOOK = 'GovijanaSevaPassbookImage',
+  GN_CERTIFICATE = 'gnCertificateImage',
+}
+
 @Schema({ timestamps: false, _id: false })
 export class PersonalInfo {
   @Prop(File)

@@ -16,6 +16,7 @@ import {
 
 const T = {
   farmerNotFoundById: (id: string) => `Farmer with ID ${id} not found`,
+  farmerNotFoundByUserId: (id: string) => `Farmer not found for user ID ${id}`,
 };
 
 @Injectable()
@@ -138,5 +139,16 @@ export class FarmerService {
       statusCode: 200,
       message: 'Farmer deleted successfully',
     };
+  }
+
+  async findByUserId(userId: string): Promise<Farmer> {
+    const farmer = await this.farmerModel
+      .findOne({ user: new Types.ObjectId(userId) })
+      .exec();
+
+    if (!farmer)
+      throw new BadRequestException(T.farmerNotFoundByUserId(userId));
+
+    return farmer;
   }
 }

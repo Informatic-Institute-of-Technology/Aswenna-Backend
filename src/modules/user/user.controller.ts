@@ -7,13 +7,16 @@ import {
   Patch,
   Post,
   Query,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { UserService } from './user.service';
 import { UserCreateDto } from './dtos/user.create.dto';
 import { UserParamsDto } from './dtos/user.query.dto';
 import { RoleParamsDto } from '../role/dtos/role.query.dto';
 import { PaginationDto } from 'src/common/dtos/pagination.dto';
-import { UserUpdateDto } from './dtos/user.update.dto';
+import { UserFileUploadDto, UserUpdateDto } from './dtos/user.update.dto';
 
 @Controller({ path: 'user', version: '1' })
 export class UserController {
@@ -60,5 +63,15 @@ export class UserController {
   @Delete(':user')
   async deleteById(@Param() params: UserParamsDto) {
     return this.userService.deleteById(params.user);
+  }
+
+  @Post(':user/upload')
+  @UseInterceptors(FileInterceptor('file'))
+  async uploadFile(
+    @Param() params: UserParamsDto,
+    @UploadedFile() file: any,
+    @Query() fileUpload: UserFileUploadDto,
+  ) {
+    return this.userService.uploadFile(params.user, file, fileUpload.target);
   }
 }

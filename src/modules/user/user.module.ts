@@ -7,6 +7,7 @@ import { RoleModule } from '../role/role.module';
 import { FarmerModule } from '../farmer/farmer.module';
 import { InvestorModule } from '../investor/investor.module';
 import { LandOwnerModule } from '../land-owner/land-owner.module';
+import { AzureConfigModule } from 'src/config/azure/azure.module';
 
 @Module({
   imports: [
@@ -15,6 +16,7 @@ import { LandOwnerModule } from '../land-owner/land-owner.module';
     forwardRef(() => FarmerModule),
     forwardRef(() => InvestorModule),
     forwardRef(() => LandOwnerModule),
+    AzureConfigModule,
   ],
   controllers: [UserController],
   providers: [UserService],

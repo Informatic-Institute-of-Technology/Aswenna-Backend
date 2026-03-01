@@ -7,7 +7,7 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { FilterQuery, Model, Types } from 'mongoose';
 import * as bcrypt from 'bcrypt';
-import { User } from './schemas/user.schema';
+import { User, UserImageTarget } from './schemas/user.schema';
 import { UserCreateI, UserUpdateI } from './user.types';
 import {
   PaginatedResponseType,
@@ -17,6 +17,8 @@ import { RoleService } from '../role/role.service';
 import { FarmerService } from '../farmer/farmer.service';
 import { InvestorService } from '../investor/investor.service';
 import { LandOwnerService } from '../land-owner/land-owner.service';
+import { AzureBlobStorageService } from '../../config/azure/services/azure-blob-storage.service';
+import { File } from '../../common/schemas/file.schema';
 
 const T = {
   duplicateUserFoundByEmail: 'User with this email already exists',
@@ -24,6 +26,10 @@ const T = {
   roleAlreadyAssigned: 'Role already assigned to user',
   roleNotAssigned: 'Role not assigned to user',
   roleNotFound: (role: string) => `Role ${role} not found`,
+  userDoesNotHaveRole:
+    'User does not have the required role for this operation',
+  invalidTarget: 'Invalid target field specified',
+  noFileProvided: 'No file provided',
 };
 
 @Injectable()
@@ -37,6 +43,7 @@ export class UserService {
     private readonly investorService: InvestorService,
     @Inject(forwardRef(() => LandOwnerService))
     private readonly landOwnerService: LandOwnerService,
+    private readonly azureBlobStorageService: AzureBlobStorageService,
   ) {}
 
   async findAll(
@@ -207,5 +214,161 @@ export class UserService {
       message: 'User deleted successfully',
       statusCode: 200,
     };
+  }
+
+  async uploadFile(target: string, file: any, imageTarget: UserImageTarget) {
+    const user = await this.findById(target);
+
+    if (!file) throw new BadRequestException(T.noFileProvided);
+
+    const isFarmerTarget =
+      imageTarget === UserImageTarget.GOVIJANA_SEVA_PASSBOOK ||
+      imageTarget === UserImageTarget.GN_CERTIFICATE;
+
+    if (isFarmerTarget)
+      return await this.uploadFarmerFile(target, file, imageTarget);
+
+    await this.deleteExistingFile(user, imageTarget);
+
+    const userFolderPath = `users/${target}/${imageTarget}`;
+
+    const uploadResult = await this.azureBlobStorageService.uploadFile(
+      file,
+      userFolderPath,
+    );
+
+    const fileData: Partial<File> = {
+      filename: uploadResult.fileName,
+      fileSize: uploadResult.size.toString(),
+      mimeType: uploadResult.contentType,
+    };
+
+    const updateData = this.buildUpdateData(imageTarget, fileData);
+
+    return await this.userModel
+      .findByIdAndUpdate(target, updateData, { new: true })
+      .exec();
+  }
+
+  private async deleteExistingFile(
+    user: User,
+    imageTarget: UserImageTarget,
+  ): Promise<void> {
+    let existingFile: File | undefined;
+
+    switch (imageTarget) {
+      case UserImageTarget.PROFILE_PICTURE:
+        existingFile = user.personalInfo?.profilePicture;
+        break;
+      case UserImageTarget.NIC_FRONT:
+        existingFile = user.personalInfo?.nicFrontImage;
+        break;
+      case UserImageTarget.NIC_BACK:
+        existingFile = user.personalInfo?.nicBackImage;
+        break;
+    }
+
+    if (existingFile && existingFile.filename) {
+      try {
+        await this.azureBlobStorageService.deleteFile(existingFile.filename);
+      } catch {
+        console.warn(
+          `Failed to delete existing file: ${existingFile.filename}. Continuing with upload.`,
+        );
+      }
+    }
+  }
+
+  private async uploadFarmerFile(
+    target: string,
+    file: any,
+    imageTarget: UserImageTarget,
+  ) {
+    const farmer = await this.farmerService.findByUserId(target);
+
+    await this.deleteFarmerExistingFile(farmer, imageTarget);
+
+    const farmerFolderPath = `farmers/${farmer._id.toString()}/${imageTarget}`;
+
+    const uploadResult = await this.azureBlobStorageService.uploadFile(
+      file,
+      farmerFolderPath,
+    );
+
+    const fileData: Partial<File> = {
+      filename: uploadResult.fileName,
+      fileSize: uploadResult.size.toString(),
+      mimeType: uploadResult.contentType,
+    };
+
+    const updateField = this.buildFarmerUpdateField(imageTarget);
+
+    const updateData = {
+      [updateField]: fileData,
+    };
+
+    return await this.farmerService.updateById(
+      farmer._id.toString(),
+      updateData as any,
+    );
+  }
+
+  private async deleteFarmerExistingFile(
+    farmer: {
+      GovijanaSevaPassbookImage?: File;
+      gnCertificateImage?: File;
+    },
+    imageTarget: UserImageTarget,
+  ): Promise<void> {
+    let existingFile: File | undefined;
+
+    switch (imageTarget) {
+      case UserImageTarget.GOVIJANA_SEVA_PASSBOOK:
+        existingFile = farmer.GovijanaSevaPassbookImage;
+        break;
+      case UserImageTarget.GN_CERTIFICATE:
+        existingFile = farmer.gnCertificateImage;
+        break;
+    }
+
+    if (existingFile && existingFile.filename) {
+      try {
+        await this.azureBlobStorageService.deleteFile(existingFile.filename);
+      } catch {
+        console.warn(
+          `Failed to delete existing farmer file: ${existingFile.filename}. Continuing with upload.`,
+        );
+      }
+    }
+  }
+
+  private buildUpdateData(
+    target: UserImageTarget,
+    fileData: Partial<File>,
+  ): Record<string, any> {
+    const updateMap: Partial<Record<UserImageTarget, string>> = {
+      [UserImageTarget.PROFILE_PICTURE]: 'personalInfo.profilePicture',
+      [UserImageTarget.NIC_FRONT]: 'personalInfo.nicFrontImage',
+      [UserImageTarget.NIC_BACK]: 'personalInfo.nicBackImage',
+    };
+
+    const fieldPath = updateMap[target];
+    if (!fieldPath) throw new BadRequestException(T.invalidTarget);
+
+    return {
+      [fieldPath]: fileData,
+    };
+  }
+
+  private buildFarmerUpdateField(target: UserImageTarget): string {
+    const updateMap: Partial<Record<UserImageTarget, string>> = {
+      [UserImageTarget.GOVIJANA_SEVA_PASSBOOK]: 'GovijanaSevaPassbookImage',
+      [UserImageTarget.GN_CERTIFICATE]: 'gnCertificateImage',
+    };
+
+    const fieldPath = updateMap[target];
+    if (!fieldPath) throw new BadRequestException(T.invalidTarget);
+
+    return fieldPath;
   }
 }
