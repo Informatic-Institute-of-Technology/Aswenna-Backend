@@ -21,7 +21,7 @@ import {
   PreSignedUrlResponse,
 } from '../../config/azure/types/azure-blob.types';
 
-@Controller('file-upload')
+@Controller({ path: 'file-upload', version: '1' })
 export class FileUploadController {
   constructor(
     private readonly azureBlobStorageService: AzureBlobStorageService,
