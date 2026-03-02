@@ -97,7 +97,10 @@ export class UserService {
   }
 
   async findById(target: string): Promise<User> {
-    const selectedUser = await this.userModel.findById(target).exec();
+    const selectedUser = await this.userModel
+      .findById(target)
+      .populate('role')
+      .exec();
 
     if (!selectedUser)
       throw new BadRequestException(T.userNotFoundById(target));
@@ -234,7 +237,7 @@ export class UserService {
 
     await this.deleteExistingFile(user, imageTarget);
 
-    const userFolderPath = `users/${target}/${imageTarget}`;
+    const userFolderPath = `${user.role.name.toLocaleLowerCase()}s/${target}/${imageTarget}`;
 
     const uploadResult = await this.azureBlobStorageService.uploadFile(
       file,
