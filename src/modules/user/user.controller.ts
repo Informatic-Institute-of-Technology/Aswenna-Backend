@@ -7,16 +7,16 @@ import {
   Patch,
   Post,
   Query,
-  UploadedFile,
+  UploadedFiles,
   UseInterceptors,
 } from '@nestjs/common';
-import { FileInterceptor } from '@nestjs/platform-express';
+import { AnyFilesInterceptor } from '@nestjs/platform-express';
 import { UserService } from './user.service';
 import { UserCreateDto } from './dtos/user.create.dto';
 import { UserEmailParamsDto, UserParamsDto } from './dtos/user.query.dto';
 import { RoleParamsDto } from '../role/dtos/role.query.dto';
 import { PaginationDto } from 'src/common/dtos/pagination.dto';
-import { UserFileUploadDto, UserUpdateDto } from './dtos/user.update.dto';
+import { UserUpdateDto } from './dtos/user.update.dto';
 
 @Controller({ path: 'user', version: '1' })
 export class UserController {
@@ -72,12 +72,14 @@ export class UserController {
   }
 
   @Post(':user/upload')
-  @UseInterceptors(FileInterceptor('file'))
-  async uploadFile(
+  @UseInterceptors(AnyFilesInterceptor())
+  async uploadMultipleFiles(
     @Param() params: UserParamsDto,
-    @UploadedFile() file: any,
-    @Query() fileUpload: UserFileUploadDto,
+    @UploadedFiles() files: any[],
   ) {
-    return this.userService.uploadFile(params.user, file, fileUpload.target);
+    return await this.userService.uploadMultipleFilesByFieldName(
+      params.user,
+      files,
+    );
   }
 }
