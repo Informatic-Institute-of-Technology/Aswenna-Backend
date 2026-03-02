@@ -71,7 +71,7 @@ export class UserController {
     return this.userService.deleteById(params.user);
   }
 
-  @Post(':user/upload-multiple')
+  @Post(':user/upload')
   @UseInterceptors(AnyFilesInterceptor())
   async uploadMultipleFiles(
     @Param() params: UserParamsDto,
