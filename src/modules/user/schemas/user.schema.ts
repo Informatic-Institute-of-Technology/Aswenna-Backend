@@ -24,6 +24,8 @@ export enum UserImageTarget {
   NIC_BACK = 'nicBackImage',
   GOVIJANA_SEVA_PASSBOOK = 'GovijanaSevaPassbookImage',
   GN_CERTIFICATE = 'gnCertificateImage',
+  BIMSAVIYA_CERTIFICATE = 'bimsaviyaCertificate',
+  LAND_IMAGES = 'landImages',
 }
 
 @Schema({ timestamps: false, _id: false })

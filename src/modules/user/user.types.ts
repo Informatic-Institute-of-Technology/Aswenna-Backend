@@ -48,7 +48,6 @@ export interface LandAddressI {
   readonly rentalExpectation: string;
   readonly dsDivision: string;
   readonly gnDivision: string;
-  readonly landImages: string[];
 }
 
 export interface LandOwnerDetailsI {
@@ -68,8 +67,8 @@ export interface UserCreateI {
   readonly personalInfo: PersonalInfoI;
   readonly role: string;
   readonly farmerDetails?: FarmerDetailsI;
-  // readonly investorDetails?: InvestorDetailsI;
-  // readonly landOwnerDetails?: LandOwnerDetailsI;
+  readonly investorDetails?: InvestorDetailsI;
+  readonly landOwnerDetails?: LandOwnerDetailsI;
 }
 
 export interface UserUpdateI {
