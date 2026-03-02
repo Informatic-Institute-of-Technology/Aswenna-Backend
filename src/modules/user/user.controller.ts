@@ -13,7 +13,7 @@ import {
 import { FileInterceptor } from '@nestjs/platform-express';
 import { UserService } from './user.service';
 import { UserCreateDto } from './dtos/user.create.dto';
-import { UserParamsDto } from './dtos/user.query.dto';
+import { UserEmailParamsDto, UserParamsDto } from './dtos/user.query.dto';
 import { RoleParamsDto } from '../role/dtos/role.query.dto';
 import { PaginationDto } from 'src/common/dtos/pagination.dto';
 import { UserFileUploadDto, UserUpdateDto } from './dtos/user.update.dto';
@@ -35,6 +35,12 @@ export class UserController {
   @Get(':user')
   async getById(@Param() params: UserParamsDto) {
     return this.userService.findById(params.user);
+  }
+
+  @Get('email/:email/duplicate-check')
+  async getByEmail(@Param() params: UserEmailParamsDto) {
+    const user = await this.userService.findByEmail(params.email);
+    return { exists: !!user };
   }
 
   @Post()

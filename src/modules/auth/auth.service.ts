@@ -5,6 +5,7 @@ import * as bcrypt from 'bcrypt';
 import { ConfigService } from '@nestjs/config';
 import { parseDurationToSeconds } from 'src/common/utils/time.util';
 import { AuthPayloadI } from './auth.types';
+import { UserStatus } from '../user/schemas/user.schema';
 
 const T = {
   invalidCredentials: 'Invalid credentials',
@@ -21,6 +22,9 @@ export class AuthService {
   async login(email: string, password: string) {
     const user = await this.userService.findByEmailWithPassword(email);
     if (!user) throw new UnauthorizedException(T.invalidCredentials);
+
+    if (user.status !== UserStatus.Active)
+      throw new UnauthorizedException('Account is inactive');
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
 

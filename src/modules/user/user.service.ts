@@ -105,6 +105,10 @@ export class UserService {
     return selectedUser;
   }
 
+  async findByEmail(email: string): Promise<User | null> {
+    return this.userModel.findOne({ email }).exec();
+  }
+
   async create(user: UserCreateI): Promise<User> {
     const existingUser = await this.userModel.findOne({
       email: user.email,

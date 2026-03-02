@@ -5,7 +5,7 @@ import {
   IsPhoneNumber,
   IsString,
 } from 'class-validator';
-import { UserImageTarget } from '../schemas/user.schema';
+import { UserImageTarget, UserStatus } from '../schemas/user.schema';
 
 export class UserUpdateDto {
   @IsString()
@@ -19,6 +19,10 @@ export class UserUpdateDto {
   @IsPhoneNumber()
   @IsOptional()
   readonly phoneNumber: string;
+
+  @IsEnum(UserStatus)
+  @IsOptional()
+  readonly status: UserStatus;
 }
 
 export class UserFileUploadDto {

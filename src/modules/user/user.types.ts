@@ -76,4 +76,5 @@ export interface UserUpdateI {
   readonly fullName: string;
   readonly address: string;
   readonly phoneNumber: string;
+  readonly status: string;
 }
