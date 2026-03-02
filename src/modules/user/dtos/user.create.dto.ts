@@ -13,7 +13,6 @@ import {
   Max,
   ValidateNested,
   ValidateIf,
-  IsArray,
   IsEnum,
 } from 'class-validator';
 import { Type } from 'class-transformer';
@@ -173,11 +172,6 @@ export class LandAddressDto {
   @IsNotEmpty()
   @IsString()
   readonly gnDivision: string;
-
-  @IsNotEmpty()
-  @IsArray()
-  @IsString({ each: true })
-  readonly landImages: string[];
 }
 
 export class LandOwnerDetailsDto {
@@ -242,15 +236,15 @@ export class UserCreateDto {
   @Type(() => FarmerDetailsDto)
   readonly farmerDetails?: FarmerDetailsDto;
 
-  //   @ValidateIf((o: UserCreateDto) => o.role.toLowerCase() === 'investor')
-  //   @IsNotEmpty()
-  //   @ValidateNested()
-  //   @Type(() => InvestorDetailsDto)
-  //   readonly investorDetails: InvestorDetailsDto;
+  @ValidateIf((o: UserCreateDto) => o.role.toLowerCase() === 'investor')
+  @IsNotEmpty()
+  @ValidateNested()
+  @Type(() => InvestorDetailsDto)
+  readonly investorDetails: InvestorDetailsDto;
 
-  //   @ValidateIf((o: UserCreateDto) => o.role.toLowerCase() === 'landowner')
-  //   @IsNotEmpty()
-  //   @ValidateNested()
-  //   @Type(() => LandOwnerDetailsDto)
-  //   readonly landOwnerDetails: LandOwnerDetailsDto;
+  @ValidateIf((o: UserCreateDto) => o.role.toLowerCase() === 'landowner')
+  @IsNotEmpty()
+  @ValidateNested()
+  @Type(() => LandOwnerDetailsDto)
+  readonly landOwnerDetails: LandOwnerDetailsDto;
 }

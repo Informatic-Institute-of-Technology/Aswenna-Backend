@@ -17,6 +17,5 @@ export interface LandOwnerCreateI {
     readonly rentalExpectation: string;
     readonly dsDivision: string;
     readonly gnDivision: string;
-    readonly landImages: string[];
   };
 }

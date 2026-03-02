@@ -149,20 +149,20 @@ export class UserService {
             ...user.farmerDetails,
           });
         break;
-      // case 'investor':
-      //   if (user.investorDetails)
-      //     await this.investorService.create({
-      //       user: createdUser._id.toString(),
-      //       ...user.investorDetails,
-      //     });
-      //   break;
-      // case 'landowner':
-      //   if (user.landOwnerDetails)
-      //     await this.landOwnerService.create({
-      //       user: createdUser._id.toString(),
-      //       ...user.landOwnerDetails,
-      //     });
-      // break;
+      case 'investor':
+        if (user.investorDetails)
+          await this.investorService.create({
+            user: createdUser._id.toString(),
+            ...user.investorDetails,
+          });
+        break;
+      case 'landowner':
+        if (user.landOwnerDetails)
+          await this.landOwnerService.create({
+            user: createdUser._id.toString(),
+            ...user.landOwnerDetails,
+          });
+        break;
       default:
         throw new BadRequestException(T.roleNotFound(user.role));
     }
@@ -258,9 +258,17 @@ export class UserService {
         target === UserImageTarget.GOVIJANA_SEVA_PASSBOOK ||
         target === UserImageTarget.GN_CERTIFICATE;
 
+      const isLandOwnerTarget =
+        target === UserImageTarget.BIMSAVIYA_CERTIFICATE ||
+        target === UserImageTarget.LAND_IMAGES;
+
       if (isFarmerTarget) {
         for (const file of targetFiles) {
           await this.uploadFarmerFile(userId, file, target);
+        }
+      } else if (isLandOwnerTarget) {
+        for (const file of targetFiles) {
+          await this.uploadLandOwnerFile(userId, file, target);
         }
       } else {
         if (targetFiles.length > 1)
@@ -298,6 +306,7 @@ export class UserService {
     // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const userObj: Record<string, any> = user.toObject ? user.toObject() : user;
 
+    // Add URLs for personal info files
     if (userObj.personalInfo) {
       // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       if (userObj.personalInfo.profilePicture?.filename) {
@@ -325,6 +334,81 @@ export class UserService {
             // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
             userObj.personalInfo.nicBackImage.filename as string,
           );
+      }
+    }
+
+    // Add URLs for farmer files
+    if (
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      userObj.role?.name?.toLowerCase() === 'farmer'
+    ) {
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        const farmer = await this.farmerService.findByUserId(
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+          userObj._id as string,
+        );
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+        if (farmer?.GovijanaSevaPassbookImage?.filename) {
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+          farmer.GovijanaSevaPassbookImage.url =
+            await this.azureBlobStorageService.getFileUrl(
+              // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+              farmer.GovijanaSevaPassbookImage.filename as string,
+            );
+        }
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+        if (farmer?.gnCertificateImage?.filename) {
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+          farmer.gnCertificateImage.url =
+            await this.azureBlobStorageService.getFileUrl(
+              // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+              farmer.gnCertificateImage.filename as string,
+            );
+        }
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+        userObj.farmer = farmer;
+      } catch {
+        // Farmer record not found, continue
+      }
+    }
+
+    // Add URLs for landowner files
+    if (
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      userObj.role?.name?.toLowerCase() === 'landowner'
+    ) {
+      try {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+        const landOwner = await this.landOwnerService.findByUserId(
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+          userObj._id as string,
+        );
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+        if (landOwner?.landAddress?.bimsaviyaCertificate?.filename) {
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+          landOwner.landAddress.bimsaviyaCertificate.url =
+            await this.azureBlobStorageService.getFileUrl(
+              // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+              landOwner.landAddress.bimsaviyaCertificate.filename as string,
+            );
+        }
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+        if (landOwner?.landAddress?.landImages?.length) {
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+          for (const image of landOwner.landAddress.landImages) {
+            if (image?.filename) {
+              // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+              image.url = await this.azureBlobStorageService.getFileUrl(
+                image.filename as string,
+              );
+            }
+          }
+        }
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+        userObj.landOwner = landOwner;
+      } catch {
+        // LandOwner record not found, continue
       }
     }
 
@@ -394,6 +478,40 @@ export class UserService {
     );
   }
 
+  private async uploadLandOwnerFile(
+    userId: string,
+    file: any,
+    imageTarget: UserImageTarget,
+  ) {
+    const landOwner = await this.landOwnerService.findByUserId(userId);
+
+    await this.deleteLandOwnerExistingFile(landOwner, imageTarget);
+
+    const landOwnerFolderPath = `landowners/${landOwner._id.toString()}/${imageTarget}`;
+
+    const uploadResult = await this.azureBlobStorageService.uploadFile(
+      file,
+      landOwnerFolderPath,
+    );
+
+    const fileData: Partial<File> = {
+      filename: uploadResult.fileName,
+      fileSize: uploadResult.size.toString(),
+      mimeType: uploadResult.contentType,
+    };
+
+    const updateField = this.buildLandOwnerUpdateField(imageTarget);
+
+    const updateData = {
+      [updateField]: fileData,
+    };
+
+    return await this.landOwnerService.updateById(
+      landOwner._id.toString(),
+      updateData as any,
+    );
+  }
+
   private async deleteFarmerExistingFile(
     farmer: {
       GovijanaSevaPassbookImage?: File;
@@ -445,6 +563,69 @@ export class UserService {
     const updateMap: Partial<Record<UserImageTarget, string>> = {
       [UserImageTarget.GOVIJANA_SEVA_PASSBOOK]: 'GovijanaSevaPassbookImage',
       [UserImageTarget.GN_CERTIFICATE]: 'gnCertificateImage',
+    };
+
+    const fieldPath = updateMap[target];
+    if (!fieldPath) throw new BadRequestException(T.invalidTarget);
+
+    return fieldPath;
+  }
+
+  private async deleteLandOwnerExistingFile(
+    landOwner: {
+      landAddress?: {
+        bimsaviyaCertificate?: File;
+        landImages?: File[];
+      };
+    },
+    imageTarget: UserImageTarget,
+  ): Promise<void> {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+    const landAddress = (landOwner as any)?.landAddress;
+
+    if (!landAddress) return;
+
+    switch (imageTarget) {
+      case UserImageTarget.BIMSAVIYA_CERTIFICATE: {
+        const existingFile = landAddress.bimsaviyaCertificate;
+        if (existingFile && existingFile.filename) {
+          try {
+            await this.azureBlobStorageService.deleteFile(
+              existingFile.filename,
+            );
+          } catch {
+            console.warn(
+              `Failed to delete existing bimsaviya certificate: ${existingFile.filename}. Continuing with upload.`,
+            );
+          }
+        }
+        break;
+      }
+      case UserImageTarget.LAND_IMAGES: {
+        const existingFiles = landAddress.landImages;
+        if (existingFiles && Array.isArray(existingFiles)) {
+          for (const file of existingFiles) {
+            if (file && file.filename) {
+              try {
+                await this.azureBlobStorageService.deleteFile(file.filename);
+              } catch {
+                console.warn(
+                  `Failed to delete existing land image: ${file.filename}. Continuing with upload.`,
+                );
+              }
+            }
+          }
+        }
+        break;
+      }
+    }
+  }
+
+  private buildLandOwnerUpdateField(target: UserImageTarget): string {
+    const updateMap: Partial<Record<UserImageTarget, string>> = {
+      [UserImageTarget.BIMSAVIYA_CERTIFICATE]:
+        'landAddress.bimsaviyaCertificate',
+      [UserImageTarget.LAND_IMAGES]: 'landAddress.landImages',
     };
 
     const fieldPath = updateMap[target];

@@ -2,6 +2,7 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 import { User } from 'src/modules/user/schemas/user.schema';
 import { Meta } from 'src/common/schemas/meta.schema';
+import { File } from 'src/common/schemas/file.schema';
 
 @Schema({ _id: false })
 export class LandOwnerLocation {
@@ -44,8 +45,11 @@ export class LandAddress {
   @Prop()
   readonly gnDivision: string;
 
-  @Prop([String])
-  readonly landImages: string[];
+  @Prop(File)
+  readonly bimsaviyaCertificate: File;
+
+  @Prop([File])
+  readonly landImages: File[];
 }
 
 @Schema({ timestamps: true })

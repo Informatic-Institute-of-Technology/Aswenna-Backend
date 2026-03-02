@@ -12,6 +12,9 @@ export class File extends Document {
   @Prop()
   readonly mimeType: string;
 
+  @Prop()
+  url?: string;
+
   @Prop(Date)
   readonly createdAt: Date;
 
