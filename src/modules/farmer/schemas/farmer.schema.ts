@@ -2,6 +2,7 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 import { User } from 'src/modules/user/schemas/user.schema';
 import { Meta } from 'src/common/schemas/meta.schema';
+import { File } from 'src/common/schemas/file.schema';
 
 @Schema({ timestamps: true })
 export class Farmer extends Document {
@@ -19,11 +20,11 @@ export class Farmer extends Document {
   @Prop()
   readonly govijanaSevaId: string;
 
-  @Prop()
-  readonly GovijanaSevaPassbookImage: string;
+  @Prop(File)
+  readonly GovijanaSevaPassbookImage: File;
 
-  @Prop()
-  readonly gnCertificateImage: string;
+  @Prop(File)
+  readonly gnCertificateImage: File;
 
   @Prop()
   readonly crop: string;

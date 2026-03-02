@@ -7,7 +7,6 @@ import {
   IsStrongPassword,
   MinLength,
   IsBoolean,
-  IsBase64,
   IsDateString,
   IsNumber,
   Min,
@@ -15,14 +14,12 @@ import {
   ValidateNested,
   ValidateIf,
   IsArray,
+  IsEnum,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import { Gender } from '../schemas/user.schema';
 
 export class PersonalInfoDto {
-  @IsOptional()
-  @IsBase64()
-  readonly profilePicture: string;
-
   @IsNotEmpty()
   @IsString()
   readonly nicNumber: string;
@@ -32,8 +29,8 @@ export class PersonalInfoDto {
   readonly birthday: string;
 
   @IsNotEmpty()
-  @IsString()
-  readonly gender: string;
+  @IsEnum(Gender)
+  readonly gender: Gender;
 
   @IsNotEmpty()
   @IsNumber()
@@ -55,19 +52,11 @@ export class PersonalInfoDto {
 
   @IsNotEmpty()
   @IsString()
-  readonly district: string;
-
-  @IsNotEmpty()
-  @IsString()
   readonly province: string;
 
   @IsNotEmpty()
   @IsString()
-  readonly nicFrontImage: string;
-
-  @IsNotEmpty()
-  @IsString()
-  readonly nicBackImage: string;
+  readonly district: string;
 }
 
 export class FarmerDetailsDto {
@@ -82,14 +71,6 @@ export class FarmerDetailsDto {
   @IsNotEmpty()
   @IsString()
   readonly govijanaSevaId: string;
-
-  @IsNotEmpty()
-  @IsString()
-  readonly GovijanaSevaPassbookImage: string;
-
-  @IsNotEmpty()
-  @IsString()
-  readonly gnCertificateImage: string;
 
   @IsNotEmpty()
   @IsString()
@@ -259,17 +240,17 @@ export class UserCreateDto {
   @IsNotEmpty()
   @ValidateNested()
   @Type(() => FarmerDetailsDto)
-  readonly farmerDetails: FarmerDetailsDto;
+  readonly farmerDetails?: FarmerDetailsDto;
 
-  @ValidateIf((o: UserCreateDto) => o.role.toLowerCase() === 'investor')
-  @IsNotEmpty()
-  @ValidateNested()
-  @Type(() => InvestorDetailsDto)
-  readonly investorDetails: InvestorDetailsDto;
+  //   @ValidateIf((o: UserCreateDto) => o.role.toLowerCase() === 'investor')
+  //   @IsNotEmpty()
+  //   @ValidateNested()
+  //   @Type(() => InvestorDetailsDto)
+  //   readonly investorDetails: InvestorDetailsDto;
 
-  @ValidateIf((o: UserCreateDto) => o.role.toLowerCase() === 'landowner')
-  @IsNotEmpty()
-  @ValidateNested()
-  @Type(() => LandOwnerDetailsDto)
-  readonly landOwnerDetails: LandOwnerDetailsDto;
+  //   @ValidateIf((o: UserCreateDto) => o.role.toLowerCase() === 'landowner')
+  //   @IsNotEmpty()
+  //   @ValidateNested()
+  //   @Type(() => LandOwnerDetailsDto)
+  //   readonly landOwnerDetails: LandOwnerDetailsDto;
 }

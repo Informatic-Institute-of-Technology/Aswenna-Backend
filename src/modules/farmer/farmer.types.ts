@@ -3,8 +3,6 @@ export interface FarmerCreateI {
   readonly dsDivision: string;
   readonly gnDivision: string;
   readonly govijanaSevaId: string;
-  readonly GovijanaSevaPassbookImage: string;
-  readonly gnCertificateImage: string;
   readonly crop: string;
   readonly experience: string;
   readonly regions: string;
