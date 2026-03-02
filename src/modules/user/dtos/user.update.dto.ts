@@ -1,11 +1,5 @@
-import {
-  IsEnum,
-  IsNotEmpty,
-  IsOptional,
-  IsPhoneNumber,
-  IsString,
-} from 'class-validator';
-import { UserImageTarget, UserStatus } from '../schemas/user.schema';
+import { IsEnum, IsOptional, IsPhoneNumber, IsString } from 'class-validator';
+import { UserStatus } from '../schemas/user.schema';
 
 export class UserUpdateDto {
   @IsString()
@@ -23,10 +17,4 @@ export class UserUpdateDto {
   @IsEnum(UserStatus)
   @IsOptional()
   readonly status: UserStatus;
-}
-
-export class UserFileUploadDto {
-  @IsNotEmpty()
-  @IsEnum(UserImageTarget)
-  target: UserImageTarget;
 }

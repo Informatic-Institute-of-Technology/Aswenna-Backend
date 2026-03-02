@@ -79,6 +79,11 @@ export class UserService {
       this.userModel.countDocuments(filter).exec(),
     ]);
 
+    // // Enrich all users with file URLs
+    // const enrichedData = await Promise.all(
+    //   data.map((user) => this.enrichUserWithFileUrls(user)),
+    // );
+
     const totalPages = Math.ceil(totalDocs / limit);
 
     return {
@@ -105,7 +110,7 @@ export class UserService {
     if (!selectedUser)
       throw new BadRequestException(T.userNotFoundById(target));
 
-    return selectedUser;
+    return await this.enrichUserWithFileUrls(selectedUser);
   }
 
   async findByEmail(email: string): Promise<User | null> {
@@ -223,38 +228,107 @@ export class UserService {
     };
   }
 
-  async uploadFile(target: string, file: any, imageTarget: UserImageTarget) {
-    const user = await this.findById(target);
+  async uploadMultipleFilesByFieldName(userId: string, files: any[]) {
+    const user = await this.findById(userId);
 
-    if (!file) throw new BadRequestException(T.noFileProvided);
+    if (!files || files.length === 0)
+      throw new BadRequestException(T.noFileProvided);
 
-    const isFarmerTarget =
-      imageTarget === UserImageTarget.GOVIJANA_SEVA_PASSBOOK ||
-      imageTarget === UserImageTarget.GN_CERTIFICATE;
+    const filesByTarget = new Map<string, any[]>();
+    for (const file of files) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      const targetFieldname: string = file.fieldname as string;
+      if (!filesByTarget.has(targetFieldname))
+        filesByTarget.set(targetFieldname, []);
 
-    if (isFarmerTarget)
-      return await this.uploadFarmerFile(target, file, imageTarget);
+      filesByTarget.get(targetFieldname)!.push(file);
+    }
 
-    await this.deleteExistingFile(user, imageTarget);
+    for (const [targetName, targetFiles] of filesByTarget) {
+      if (
+        !Object.values(UserImageTarget).includes(targetName as UserImageTarget)
+      )
+        throw new BadRequestException(
+          `Invalid target field name: ${targetName}. Must be one of: ${Object.values(UserImageTarget).join(', ')}`,
+        );
 
-    const userFolderPath = `${user.role.name.toLocaleLowerCase()}s/${target}/${imageTarget}`;
+      const target = targetName as UserImageTarget;
 
-    const uploadResult = await this.azureBlobStorageService.uploadFile(
-      file,
-      userFolderPath,
-    );
+      const isFarmerTarget =
+        target === UserImageTarget.GOVIJANA_SEVA_PASSBOOK ||
+        target === UserImageTarget.GN_CERTIFICATE;
 
-    const fileData: Partial<File> = {
-      filename: uploadResult.fileName,
-      fileSize: uploadResult.size.toString(),
-      mimeType: uploadResult.contentType,
-    };
+      if (isFarmerTarget) {
+        for (const file of targetFiles) {
+          await this.uploadFarmerFile(userId, file, target);
+        }
+      } else {
+        if (targetFiles.length > 1)
+          console.warn(
+            `Target ${target} does not support multiple files. Only the first file will be uploaded.`,
+          );
 
-    const updateData = this.buildUpdateData(imageTarget, fileData);
+        await this.deleteExistingFile(user, target);
 
-    return await this.userModel
-      .findByIdAndUpdate(target, updateData, { new: true })
-      .exec();
+        const userFolderPath = `${user.role.name.toLocaleLowerCase()}s/${userId}/${target}`;
+
+        const uploadResult = await this.azureBlobStorageService.uploadFile(
+          targetFiles[0],
+          userFolderPath,
+        );
+
+        const fileData: Partial<File> = {
+          filename: uploadResult.fileName,
+          fileSize: uploadResult.size.toString(),
+          mimeType: uploadResult.contentType,
+        };
+
+        const updateData = this.buildUpdateData(target, fileData);
+
+        await this.userModel
+          .findByIdAndUpdate(userId, updateData, { new: true })
+          .exec();
+      }
+    }
+
+    return await this.findById(userId);
+  }
+
+  private async enrichUserWithFileUrls(user: User): Promise<User> {
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
+    const userObj: Record<string, any> = user.toObject ? user.toObject() : user;
+
+    if (userObj.personalInfo) {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      if (userObj.personalInfo.profilePicture?.filename) {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+        userObj.personalInfo.profilePicture.url =
+          await this.azureBlobStorageService.getFileUrl(
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+            userObj.personalInfo.profilePicture.filename as string,
+          );
+      }
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      if (userObj.personalInfo.nicFrontImage?.filename) {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+        userObj.personalInfo.nicFrontImage.url =
+          await this.azureBlobStorageService.getFileUrl(
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+            userObj.personalInfo.nicFrontImage.filename as string,
+          );
+      }
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+      if (userObj.personalInfo.nicBackImage?.filename) {
+        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+        userObj.personalInfo.nicBackImage.url =
+          await this.azureBlobStorageService.getFileUrl(
+            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
+            userObj.personalInfo.nicBackImage.filename as string,
+          );
+      }
+    }
+
+    return userObj as User;
   }
 
   private async deleteExistingFile(
