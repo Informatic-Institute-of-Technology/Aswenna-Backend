@@ -6,7 +6,7 @@ import { Permission } from 'src/modules/permission/schemas/permission.schema';
 import { Role } from 'src/modules/role/schemas/role.schema';
 
 export enum UserStatus {
-  PENDING = 'PENDING',
+  Pending = 'Pending',
   Active = 'Active',
   Inactive = 'Inactive',
   Suspended = 'Suspended',
@@ -98,7 +98,7 @@ export class User extends Document {
   @Prop(Date)
   readonly termsAcceptedAt: Date;
 
-  @Prop({ enum: UserStatus, default: UserStatus.PENDING })
+  @Prop({ enum: UserStatus, default: UserStatus.Pending })
   readonly status: UserStatus;
 
   @Prop({ type: Types.ObjectId, ref: Role.name })
