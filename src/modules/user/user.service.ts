@@ -303,70 +303,48 @@ export class UserService {
   }
 
   private async enrichUserWithFileUrls(user: User): Promise<User> {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
     const userObj: Record<string, any> = user.toObject ? user.toObject() : user;
 
     // Add URLs for personal info files
     if (userObj.personalInfo) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       if (userObj.personalInfo.profilePicture?.filename) {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         userObj.personalInfo.profilePicture.url =
           await this.azureBlobStorageService.getFileUrl(
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
             userObj.personalInfo.profilePicture.filename as string,
           );
       }
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       if (userObj.personalInfo.nicFrontImage?.filename) {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         userObj.personalInfo.nicFrontImage.url =
           await this.azureBlobStorageService.getFileUrl(
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
             userObj.personalInfo.nicFrontImage.filename as string,
           );
       }
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
       if (userObj.personalInfo.nicBackImage?.filename) {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         userObj.personalInfo.nicBackImage.url =
           await this.azureBlobStorageService.getFileUrl(
-            // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
             userObj.personalInfo.nicBackImage.filename as string,
           );
       }
     }
 
     // Add URLs for farmer files
-    if (
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      userObj.role?.name?.toLowerCase() === 'farmer'
-    ) {
+    if (userObj.role?.name?.toLowerCase() === 'farmer') {
       try {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         const farmer = await this.farmerService.findByUserId(
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
           userObj._id as string,
         );
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         if (farmer?.GovijanaSevaPassbookImage?.filename) {
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
           farmer.GovijanaSevaPassbookImage.url =
             await this.azureBlobStorageService.getFileUrl(
-              // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
               farmer.GovijanaSevaPassbookImage.filename as string,
             );
         }
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         if (farmer?.gnCertificateImage?.filename) {
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
           farmer.gnCertificateImage.url =
             await this.azureBlobStorageService.getFileUrl(
-              // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
               farmer.gnCertificateImage.filename as string,
             );
         }
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         userObj.farmer = farmer;
       } catch {
         // Farmer record not found, continue
@@ -374,41 +352,41 @@ export class UserService {
     }
 
     // Add URLs for landowner files
-    if (
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      userObj.role?.name?.toLowerCase() === 'landowner'
-    ) {
+    if (userObj.role?.name?.toLowerCase() === 'landowner') {
       try {
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-assignment
         const landOwner = await this.landOwnerService.findByUserId(
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
           userObj._id as string,
         );
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         if (landOwner?.landAddress?.bimsaviyaCertificate?.filename) {
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
           landOwner.landAddress.bimsaviyaCertificate.url =
             await this.azureBlobStorageService.getFileUrl(
-              // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
               landOwner.landAddress.bimsaviyaCertificate.filename as string,
             );
         }
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         if (landOwner?.landAddress?.landImages?.length) {
-          // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
           for (const image of landOwner.landAddress.landImages) {
             if (image?.filename) {
-              // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
               image.url = await this.azureBlobStorageService.getFileUrl(
                 image.filename as string,
               );
             }
           }
         }
-        // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
         userObj.landOwner = landOwner;
       } catch {
         // LandOwner record not found, continue
+      }
+    }
+
+    // Add URLs for investor files
+    if (userObj.role?.name?.toLowerCase() === 'investor') {
+      try {
+        const investor = await this.investorService.findByUserId(
+          userObj._id as string,
+        );
+        userObj.investor = investor;
+      } catch {
+        // Investor record not found, continue
       }
     }
 
