@@ -10,8 +10,11 @@ export interface FarmerCreateI {
 }
 
 export interface FarmerUpdateI {
-  readonly experience: string;
-  readonly crop: string;
-  readonly regions: string;
-  readonly specificNeeds: string;
+  readonly dsDivision?: string;
+  readonly gnDivision?: string;
+  readonly govijanaSevaId?: string;
+  readonly crop?: string;
+  readonly experience?: string;
+  readonly regions?: string;
+  readonly specificNeeds?: string;
 }

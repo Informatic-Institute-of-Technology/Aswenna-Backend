@@ -1,22 +1,21 @@
+import { Type } from 'class-transformer';
 import {
+  IsBoolean,
+  IsDateString,
   IsEmail,
+  IsIn,
   IsNotEmpty,
+  IsNumber,
   IsOptional,
   IsPhoneNumber,
   IsString,
   IsStrongPassword,
-  MinLength,
-  IsBoolean,
-  IsDateString,
-  IsNumber,
-  Min,
   Max,
-  ValidateNested,
+  Min,
+  MinLength,
   ValidateIf,
-  IsEnum,
+  ValidateNested,
 } from 'class-validator';
-import { Type } from 'class-transformer';
-import { Gender } from '../schemas/user.schema';
 
 export class PersonalInfoDto {
   @IsNotEmpty()
@@ -28,8 +27,8 @@ export class PersonalInfoDto {
   readonly birthday: string;
 
   @IsNotEmpty()
-  @IsEnum(Gender)
-  readonly gender: Gender;
+  @IsIn(['Male', 'Female', 'Other'])
+  readonly gender: string;
 
   @IsNotEmpty()
   @IsNumber()

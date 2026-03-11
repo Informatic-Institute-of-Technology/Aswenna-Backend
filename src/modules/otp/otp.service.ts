@@ -1,12 +1,12 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
-import { ConfigService } from '@nestjs/config';
-import { Otp, OtpType } from './schemas/otp.schema';
+import { NotificationService } from '../notification/notification.service';
 import { SendOtpDto } from './dto/generate.otp.dto';
 import { VerifyOtpDto } from './dto/validate.otp.dto';
 import { OtpResponse, OtpVerificationResponse, SendOtpType } from './otp.types';
-import { NotificationService } from '../notification/notification.service';
+import { Otp, OtpType } from './schemas/otp.schema';
 
 @Injectable()
 export class OtpService {
@@ -109,16 +109,100 @@ export class OtpService {
     type: OtpType,
     code: string,
   ): Promise<void> {
-    const message = `Your Aswenna verification code is: ${code}. This code will expire in ${this.otpExpirationMinutes} minutes. Do not share this code with anyone.`;
+    if (type === OtpType.EMAIL) {
+      const textMessage = `Your Aswenna verification code is: ${code}. This code will expire in ${this.otpExpirationMinutes} minutes. Do not share this code with anyone.`;
 
-    if (type === OtpType.EMAIL)
       await this.notificationService.sendEmail(
         identifier,
-        'Aswenna - Verification Code',
-        message,
+        'Aswenna - Your Verification Code',
+        textMessage,
       );
-    else if (type === OtpType.PHONE)
-      await this.notificationService.sendSms(identifier, message);
+    } else if (type === OtpType.PHONE) {
+      const smsMessage = `Your Aswenna verification code is ${code}. Valid for ${this.otpExpirationMinutes} minutes. Don't share this code.`;
+      await this.notificationService.sendSms(identifier, smsMessage);
+    }
+  }
+
+  private generateOtpEmailTemplate(code: string): string {
+    return `
+      <!DOCTYPE html>
+      <html lang="en">
+      <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Verification Code</title>
+      </head>
+      <body style="margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background-color: #f4f7fa;">
+        <table width="100%" cellpadding="0" cellspacing="0" style="background-color: #f4f7fa; padding: 40px 20px;">
+          <tr>
+            <td align="center">
+              <table width="600" cellpadding="0" cellspacing="0" style="background-color: #ffffff; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);">
+                <!-- Header -->
+                <tr>
+                  <td style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 30px; text-align: center;">
+                    <h1 style="margin: 0; color: #ffffff; font-size: 28px; font-weight: 600;">Aswenna</h1>
+                    <p style="margin: 10px 0 0; color: #e0e7ff; font-size: 14px;">Secure Verification</p>
+                  </td>
+                </tr>
+                
+                <!-- Content -->
+                <tr>
+                  <td style="padding: 50px 40px;">
+                    <h2 style="margin: 0 0 20px; color: #1f2937; font-size: 24px; font-weight: 600;">Verification Code</h2>
+                    <p style="margin: 0 0 30px; color: #6b7280; font-size: 16px; line-height: 1.6;">
+                      You're receiving this email because you requested a verification code for your Aswenna account.
+                    </p>
+                    
+                    <!-- OTP Box -->
+                    <table width="100%" cellpadding="0" cellspacing="0" style="margin: 30px 0;">
+                      <tr>
+                        <td align="center" style="background-color: #f9fafb; border-radius: 8px; padding: 30px; border: 2px dashed #e5e7eb;">
+                          <p style="margin: 0 0 10px; color: #6b7280; font-size: 14px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">Your Code</p>
+                          <div style="font-size: 36px; font-weight: 700; color: #667eea; letter-spacing: 8px; font-family: 'Courier New', monospace;">${code}</div>
+                        </td>
+                      </tr>
+                    </table>
+                    
+                    <p style="margin: 30px 0 20px; color: #6b7280; font-size: 15px; line-height: 1.6;">
+                      This code will expire in <strong style="color: #dc2626;">${this.otpExpirationMinutes} minutes</strong>. Please enter it promptly to complete your verification.
+                    </p>
+                    
+                    <!-- Security Notice -->
+                    <table width="100%" cellpadding="0" cellspacing="0" style="margin: 30px 0; background-color: #fef3c7; border-left: 4px solid #f59e0b; border-radius: 4px;">
+                      <tr>
+                        <td style="padding: 20px;">
+                          <p style="margin: 0; color: #92400e; font-size: 14px; line-height: 1.6;">
+                            <strong>🔒 Security Notice:</strong><br>
+                            Never share this code with anyone. Aswenna staff will never ask for your verification code.
+                          </p>
+                        </td>
+                      </tr>
+                    </table>
+                    
+                    <p style="margin: 30px 0 0; color: #9ca3af; font-size: 14px; line-height: 1.6;">
+                      If you didn't request this code, please ignore this email or contact our support team if you have concerns.
+                    </p>
+                  </td>
+                </tr>
+                
+                <!-- Footer -->
+                <tr>
+                  <td style="background-color: #f9fafb; padding: 30px 40px; border-top: 1px solid #e5e7eb;">
+                    <p style="margin: 0 0 10px; color: #6b7280; font-size: 13px; text-align: center; line-height: 1.6;">
+                      This is an automated message from Aswenna. Please do not reply to this email.
+                    </p>
+                    <p style="margin: 0; color: #9ca3af; font-size: 12px; text-align: center;">
+                      © ${new Date().getFullYear()} Aswenna. All rights reserved.
+                    </p>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+        </table>
+      </body>
+      </html>
+    `;
   }
 
   async resendOtp(sendOtpDto: SendOtpDto): Promise<OtpResponse> {

@@ -16,4 +16,10 @@ export class InvestorService {
       user: new Types.ObjectId(investor.user),
     });
   }
+
+  async findByUserId(userId: string): Promise<Investor | null> {
+    return this.investorModel
+      .findOne({ user: new Types.ObjectId(userId) })
+      .exec();
+  }
 }

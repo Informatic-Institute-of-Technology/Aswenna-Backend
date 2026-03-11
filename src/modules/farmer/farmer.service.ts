@@ -1,18 +1,18 @@
 import {
-  Injectable,
   BadRequestException,
   forwardRef,
   Inject,
+  Injectable,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types, FilterQuery } from 'mongoose';
-import { Farmer } from './schemas/farmer.schema';
-import { UserService } from '../user/user.service';
-import { FarmerCreateI, FarmerUpdateI } from './farmer.types';
+import { FilterQuery, Model, Types } from 'mongoose';
 import {
   PaginatedResponseType,
   ResponseType,
 } from 'src/common/interfaces/response.types';
+import { UserService } from '../user/user.service';
+import { FarmerCreateI, FarmerUpdateI } from './farmer.types';
+import { Farmer } from './schemas/farmer.schema';
 
 const T = {
   farmerNotFoundById: (id: string) => `Farmer with ID ${id} not found`,
@@ -58,7 +58,8 @@ export class FarmerService {
         .limit(limit)
         .populate({
           path: 'user',
-          select: 'fullName email phoneNumber address role',
+          select:
+            'fullName email phoneNumber address role personalInfo.nicFrontImage personalInfo.nicBackImage personalInfo.profilePicture',
           populate: {
             path: 'role',
             select: 'name',
@@ -90,7 +91,8 @@ export class FarmerService {
       .findById(target)
       .populate({
         path: 'user',
-        select: 'fullName email phoneNumber address role',
+        select:
+          'fullName email phoneNumber address role personalInfo.nicFrontImage personalInfo.nicBackImage personalInfo.profilePicture',
         populate: {
           path: 'role',
           select: 'name',
