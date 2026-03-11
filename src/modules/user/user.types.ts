@@ -1,8 +1,6 @@
-import { Gender } from './schemas/user.schema';
-
 export interface PersonalInfoI {
   readonly nicNumber: string;
-  readonly gender: Gender;
+  readonly gender: string;
   readonly birthday: string;
   readonly age: number;
   readonly address: string;

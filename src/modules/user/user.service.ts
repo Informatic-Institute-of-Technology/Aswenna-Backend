@@ -1,24 +1,24 @@
 import {
   BadRequestException,
-  Injectable,
   forwardRef,
   Inject,
+  Injectable,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { FilterQuery, Model, Types } from 'mongoose';
 import * as bcrypt from 'bcrypt';
-import { User, UserImageTarget } from './schemas/user.schema';
-import { UserCreateI, UserUpdateI } from './user.types';
+import { FilterQuery, Model, Types } from 'mongoose';
 import {
   PaginatedResponseType,
   ResponseType,
 } from 'src/common/interfaces/response.types';
-import { RoleService } from '../role/role.service';
+import { File } from '../../common/schemas/file.schema';
+import { AzureBlobStorageService } from '../../config/azure/services/azure-blob-storage.service';
 import { FarmerService } from '../farmer/farmer.service';
 import { InvestorService } from '../investor/investor.service';
 import { LandOwnerService } from '../land-owner/land-owner.service';
-import { AzureBlobStorageService } from '../../config/azure/services/azure-blob-storage.service';
-import { File } from '../../common/schemas/file.schema';
+import { RoleService } from '../role/role.service';
+import { User, UserImageTarget } from './schemas/user.schema';
+import { UserCreateI, UserUpdateI } from './user.types';
 
 const T = {
   duplicateUserFoundByEmail: 'User with this email already exists',
@@ -75,14 +75,10 @@ export class UserService {
         .sort(sortOptions)
         .skip((page - 1) * limit)
         .limit(limit)
+        .select('-statues')
         .exec(),
       this.userModel.countDocuments(filter).exec(),
     ]);
-
-    // // Enrich all users with file URLs
-    // const enrichedData = await Promise.all(
-    //   data.map((user) => this.enrichUserWithFileUrls(user)),
-    // );
 
     const totalPages = Math.ceil(totalDocs / limit);
 
@@ -105,6 +101,7 @@ export class UserService {
     const selectedUser = await this.userModel
       .findById(target)
       .populate('role')
+      .select('-statues')
       .exec();
 
     if (!selectedUser)
