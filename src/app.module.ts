@@ -16,9 +16,11 @@ import { OtpModule } from './modules/otp/otp.module';
 import { MailModule } from './config/mail/mail.module';
 import { NotificationModule } from './modules/notification/notification.module';
 import { FileUploadModule } from './modules/file-upload/file-upload.module';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
+    ScheduleModule.forRoot(),
     ConfigModule,
     JwtConfigModule,
     DatabaseModule,

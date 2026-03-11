@@ -45,6 +45,10 @@ export class OfferCreateDto {
   @IsNotEmpty()
   readonly currency: string;
 
+  @IsDateString()
+  @IsNotEmpty()
+  readonly expiredDate: string;
+
   @IsOptional()
   @IsEnum(OfferStatus)
   readonly status?: OfferStatus;
@@ -119,16 +123,6 @@ export class OfferCreateDto {
   @IsString({ each: true })
   @IsNotEmpty()
   readonly cropTypes?: string[];
-
-  @ValidateIf((o: OfferCreateDto) => o.offerType === OfferType.SPONSORSHIP)
-  @IsDateString()
-  @IsNotEmpty()
-  readonly startDate?: string;
-
-  @ValidateIf((o: OfferCreateDto) => o.offerType === OfferType.SPONSORSHIP)
-  @IsDateString()
-  @IsNotEmpty()
-  readonly endDate?: string;
 
   @ValidateIf((o: OfferCreateDto) => o.offerType === OfferType.SPONSORSHIP)
   @IsEnum(FarmingMethod)

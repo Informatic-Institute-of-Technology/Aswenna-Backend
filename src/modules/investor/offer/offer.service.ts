@@ -2,7 +2,7 @@ import { Injectable, BadRequestException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { OfferCreateDto } from './dtos/offer-create.dto';
-import { Offer, OfferType } from './schemas/offer.schema';
+import { Offer, OfferStatus, OfferType } from './schemas/offer.schema';
 import { PaginatedResponseType } from 'src/common/interfaces/response.types';
 
 @Injectable()
@@ -11,6 +11,22 @@ export class OfferService {
     @InjectModel(Offer.name) private readonly offerModel: Model<Offer>,
   ) {}
 
+  async expireOffers(): Promise<number> {
+    const result = await this.offerModel
+      .updateMany(
+        {
+          status: { $ne: OfferStatus.EXPIRED },
+          expiredDate: { $lte: new Date() },
+        },
+        {
+          $set: { status: OfferStatus.EXPIRED },
+        },
+      )
+      .exec();
+
+    return result.modifiedCount;
+  }
+
   async findAll(
     page: number,
     limit: number,
@@ -18,6 +34,8 @@ export class OfferService {
     sort: string,
     type?: OfferType,
   ): Promise<PaginatedResponseType<Offer[]>> {
+    await this.expireOffers();
+
     const sortOptions: Record<string, 'asc' | 'desc'> = {};
     if (sort)
       sort.split(',').forEach((field) => {
@@ -90,6 +108,8 @@ export class OfferService {
   }
 
   async findById(id: string): Promise<Offer | null> {
+    await this.expireOffers();
+
     return this.offerModel
       .findById(id)
       .populate([
@@ -102,6 +122,8 @@ export class OfferService {
   }
 
   async create(offer: OfferCreateDto): Promise<Offer> {
+    await this.expireOffers();
+
     const mappedPayload = this.mapFlatPayloadToSchema(
       offer,
       offer.offerType,
@@ -132,9 +154,18 @@ export class OfferService {
     if (offer.expectedROI !== undefined)
       payload.expectedROI = offer.expectedROI;
     if (offer.currency !== undefined) payload.currency = offer.currency;
+    if (offer.expiredDate !== undefined)
+      payload.expiredDate = new Date(offer.expiredDate);
     if (offer.status !== undefined) payload.status = offer.status;
     if (offer.applicationsCount !== undefined)
       payload.applicationsCount = offer.applicationsCount;
+
+    if (
+      payload.expiredDate instanceof Date &&
+      payload.expiredDate.getTime() <= Date.now()
+    ) {
+      payload.status = OfferStatus.EXPIRED;
+    }
 
     const hasDirectHarvestFields =
       offer.projectTitle !== undefined ||
@@ -151,8 +182,6 @@ export class OfferService {
     const hasSponsorshipFields =
       offer.sponsorshipTitle !== undefined ||
       offer.cropTypes !== undefined ||
-      offer.startDate !== undefined ||
-      offer.endDate !== undefined ||
       offer.preferredFarmingMethod !== undefined ||
       offer.minimumInvestment !== undefined ||
       offer.maximumInvestment !== undefined ||
@@ -208,12 +237,6 @@ export class OfferService {
         ...(offer.cropTypes !== undefined && {
           cropTypes: offer.cropTypes,
         }),
-        ...(offer.startDate !== undefined && {
-          startDate: new Date(offer.startDate),
-        }),
-        ...(offer.endDate !== undefined && {
-          endDate: new Date(offer.endDate),
-        }),
         ...(offer.preferredFarmingMethod !== undefined && {
           preferredFarmingMethod: offer.preferredFarmingMethod,
         }),
@@ -243,6 +266,8 @@ export class OfferService {
     id: string,
     offerDto: Partial<OfferCreateDto>,
   ): Promise<Offer | null> {
+    await this.expireOffers();
+
     const existingOffer = await this.offerModel.findById(id).exec();
 
     if (!existingOffer) {
