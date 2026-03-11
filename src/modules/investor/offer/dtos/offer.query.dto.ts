@@ -1,6 +1,6 @@
 import { IsEnum, IsMongoId, IsNotEmpty, IsOptional } from 'class-validator';
-import { OfferType } from '../schemas/offer.schema';
 import { PaginationDto } from 'src/common/dtos/pagination.dto';
+import { OfferType } from '../schemas/offer.schema';
 
 export class OfferParamsDto {
   @IsNotEmpty()

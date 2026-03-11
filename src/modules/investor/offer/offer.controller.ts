@@ -9,8 +9,8 @@ import {
   Query,
 } from '@nestjs/common';
 import { OfferService } from './offer.service';
-import { CreateOfferDto } from './dtos/offer.create.dto';
 import { OfferParamsDto, OfferQueryDto } from './dtos/offer.query.dto';
+import { OfferCreateDto } from './dtos/offer-create.dto';
 
 @Controller({ path: 'investor-offer', version: '1' })
 export class OfferController {
@@ -33,16 +33,16 @@ export class OfferController {
   }
 
   @Post()
-  async create(@Body() createOfferDto: CreateOfferDto) {
-    return this.offerService.create(createOfferDto);
+  async create(@Body() offer: OfferCreateDto) {
+    return this.offerService.create(offer);
   }
 
   @Put(':offer')
   async update(
     @Param() params: OfferParamsDto,
-    @Body() updateOfferDto: Partial<CreateOfferDto>,
+    @Body() offer: Partial<OfferCreateDto>,
   ) {
-    return this.offerService.update(params.offer, updateOfferDto);
+    return this.offerService.update(params.offer, offer);
   }
 
   @Delete(':offer')

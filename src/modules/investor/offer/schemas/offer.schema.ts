@@ -1,74 +1,72 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 import { Meta } from 'src/common/schemas/meta.schema';
+import { User } from 'src/modules/user/schemas/user.schema';
 
 export enum OfferType {
-  HARVEST_BASE = 'HARVEST_BASE',
-  COMMISSION = 'COMMISSION',
+  DIRECT_HARVEST = 'direct-harvest',
+  SPONSORSHIP = 'sponsorship',
 }
 
 export enum FarmingMethod {
-  ORGANIC_ONLY = 'ORGANIC_ONLY',
-  CONVENTIONAL_ONLY = 'CONVENTIONAL_ONLY',
-  ANY = 'ANY',
+  ORGANIC = 'organic',
+  CONVENTIONAL = 'conventional',
+  ANY = 'any',
+}
+
+export enum OfferStatus {
+  PENDING = 'pending',
+  ACTIVE = 'active',
+  CLOSED = 'closed',
 }
 
 @Schema({ _id: false })
-export class RequiredQuantity {
-  @Prop({ required: true })
-  quantity: number;
-
-  @Prop({ required: true })
-  unit: string;
-}
-
-// Common details shared across all offer types
-@Schema({ _id: false })
-export class CommonOfferDetails {
+export class HarvestBaseDetails {
   @Prop({ required: true })
   projectTitle: string;
 
   @Prop({ required: true })
-  description: string;
-
-  @Prop({ type: [String], required: true })
-  preferredRegions: string[];
-}
-
-// Harvest Base specific details
-@Schema({ _id: false })
-export class HarvestBaseDetails {
-  @Prop({ required: true })
-  companyName: string;
-
-  @Prop({ required: true })
-  cropName: string;
+  cropType: string;
 
   @Prop({ required: true })
   cropVariety: string;
 
-  @Prop({ type: RequiredQuantity, required: true })
-  requiredQuantity: RequiredQuantity;
+  @Prop({ required: true })
+  requiredQuantity: number;
+
+  @Prop({ required: true })
+  quantityUnit: string;
 
   @Prop({ required: true })
   pricePerUnit: number;
 
   @Prop({ required: true })
-  deliveryDeadline: Date;
-
-  @Prop({ required: true })
   deliveryLocation: string;
 
   @Prop({ required: true })
-  qualityStandards: string;
+  totalBudget: number;
 
   @Prop({ required: true })
-  totalBudget: number;
+  companyName: string;
+
+  @Prop({ type: [String], required: true })
+  preferredRegion: string[];
 }
 
-// Commission specific details
 @Schema({ _id: false })
 export class CommissionDetails {
+  @Prop({ required: true })
+  sponsorshipTitle: string;
+
+  @Prop({ type: [String], required: true })
+  cropTypes: string[];
+
+  @Prop({ required: true })
+  startDate: Date;
+
+  @Prop({ required: true })
+  endDate: Date;
+
   @Prop({ required: true, enum: FarmingMethod })
   preferredFarmingMethod: FarmingMethod;
 
@@ -82,16 +80,12 @@ export class CommissionDetails {
   commissionRate: number;
 
   @Prop({ type: [String], required: true })
-  supportTypes: string[];
+  supportType: string[];
 
-  @Prop({ required: true })
-  minDuration: number;
-
-  @Prop({ required: true })
-  maxDuration: number;
+  @Prop({ type: [String], required: true })
+  preferredRegions: string[];
 }
 
-// Unified Offer Schema with nested details
 @Schema({ timestamps: true })
 export class Offer extends Document {
   declare readonly _id: Types.ObjectId;
@@ -99,21 +93,33 @@ export class Offer extends Document {
   @Prop({ required: true, enum: OfferType })
   readonly offerType: OfferType;
 
-  // Common details for all offer types - flattened directly into Offer
-  @Prop({ required: true })
-  readonly projectTitle: string;
+  @Prop({ type: Types.ObjectId, required: true, ref: User.name })
+  readonly investor: User;
 
   @Prop({ required: true })
   readonly description: string;
 
-  @Prop({ type: [String], required: true })
-  readonly preferredRegions: string[];
+  @Prop({ required: true })
+  readonly cropIcon: string;
 
-  // Harvest Base specific details (required when offerType === HARVEST_BASE)
+  @Prop({ required: true })
+  readonly backgroundImage: string;
+
+  @Prop({ required: true })
+  readonly expectedROI: number;
+
+  @Prop({ required: true })
+  readonly currency: string;
+
+  @Prop({ required: true, enum: OfferStatus, default: OfferStatus.PENDING })
+  readonly status: OfferStatus;
+
+  @Prop({ required: true, default: 0 })
+  readonly applicationsCount: number;
+
   @Prop({ type: HarvestBaseDetails })
   readonly harvestBaseDetails?: HarvestBaseDetails;
 
-  // Commission specific details (required when offerType === COMMISSION)
   @Prop({ type: CommissionDetails })
   readonly commissionDetails?: CommissionDetails;
 
@@ -135,23 +141,22 @@ export class Offer extends Document {
 
 export const OfferSchema = SchemaFactory.createForClass(Offer);
 
-// Add indexes for optimized querying
-OfferSchema.index({ offerType: 1 });
-OfferSchema.index({
-  projectTitle: 'text',
-  description: 'text',
-});
-OfferSchema.index({ createdAt: -1 });
-OfferSchema.index({ offerType: 1, createdAt: -1 });
-OfferSchema.index({
-  'harvestBaseDetails.companyName': 'text',
-  'harvestBaseDetails.cropName': 'text',
-});
-OfferSchema.index({ 'harvestBaseDetails.deliveryDeadline': 1 });
-OfferSchema.index({ 'harvestBaseDetails.pricePerUnit': 1 });
-OfferSchema.index({ 'commissionDetails.preferredFarmingMethod': 1 });
-OfferSchema.index({
-  'commissionDetails.minimumInvestment': 1,
-  'commissionDetails.maximumInvestment': 1,
-});
-OfferSchema.index({ 'commissionDetails.commissionRate': 1 });
+// OfferSchema.index({ offerType: 1 });
+// OfferSchema.index({ createdAt: -1 });
+// OfferSchema.index({ offerType: 1, createdAt: -1 });
+// OfferSchema.index({
+//   investorName: 'text',
+//   description: 'text',
+//   'harvestBaseDetails.projectTitle': 'text',
+//   'harvestBaseDetails.companyName': 'text',
+//   'harvestBaseDetails.cropType': 'text',
+//   'commissionDetails.sponsorshipTitle': 'text',
+// });
+// OfferSchema.index({ status: 1, createdAt: -1 });
+// OfferSchema.index({ 'harvestBaseDetails.preferredRegion': 1 });
+// OfferSchema.index({ 'commissionDetails.preferredRegions': 1 });
+// OfferSchema.index({ 'commissionDetails.preferredFarmingMethod': 1 });
+// OfferSchema.index({
+//   'commissionDetails.startDate': 1,
+//   'commissionDetails.endDate': 1,
+// });
