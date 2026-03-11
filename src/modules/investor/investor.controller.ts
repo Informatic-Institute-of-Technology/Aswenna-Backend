@@ -1,13 +1,7 @@
-import { Controller, Post, Body } from '@nestjs/common';
+import { Controller } from '@nestjs/common';
 import { InvestorService } from './investor.service';
-import { InvestorCreateDto } from './dtos/create-investor.dto';
 
-@Controller('investors')
+@Controller({ path: 'investor', version: '1' })
 export class InvestorController {
   constructor(private readonly investorService: InvestorService) {}
-
-  // @Post()
-  // create(@Body() investor: InvestorCreateDto) {
-  //   return this.investorService.create(investor);
-  // }
 }
