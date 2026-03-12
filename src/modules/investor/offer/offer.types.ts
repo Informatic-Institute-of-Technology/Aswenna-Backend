@@ -34,6 +34,7 @@ export interface BaseOfferType {
   backgroundImage: string;
   expectedROI: number;
   currency: string;
+  expiredDate: string;
   status?: OfferStatus;
   applicationsCount?: number;
   createdAt?: string;

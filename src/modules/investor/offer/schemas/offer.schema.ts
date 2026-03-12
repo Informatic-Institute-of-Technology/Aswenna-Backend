@@ -18,6 +18,7 @@ export enum OfferStatus {
   PENDING = 'pending',
   ACTIVE = 'active',
   CLOSED = 'closed',
+  EXPIRED = 'expired',
 }
 
 @Schema({ _id: false })
@@ -60,12 +61,6 @@ export class CommissionDetails {
 
   @Prop({ type: [String], required: true })
   cropTypes: string[];
-
-  @Prop({ required: true })
-  startDate: Date;
-
-  @Prop({ required: true })
-  endDate: Date;
 
   @Prop({ required: true, enum: FarmingMethod })
   preferredFarmingMethod: FarmingMethod;
@@ -110,6 +105,9 @@ export class Offer extends Document {
 
   @Prop({ required: true })
   readonly currency: string;
+
+  @Prop({ required: true })
+  readonly expiredDate: Date;
 
   @Prop({ required: true, enum: OfferStatus, default: OfferStatus.PENDING })
   readonly status: OfferStatus;
@@ -156,7 +154,3 @@ export const OfferSchema = SchemaFactory.createForClass(Offer);
 // OfferSchema.index({ 'harvestBaseDetails.preferredRegion': 1 });
 // OfferSchema.index({ 'commissionDetails.preferredRegions': 1 });
 // OfferSchema.index({ 'commissionDetails.preferredFarmingMethod': 1 });
-// OfferSchema.index({
-//   'commissionDetails.startDate': 1,
-//   'commissionDetails.endDate': 1,
-// });
