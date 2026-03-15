@@ -10,10 +10,12 @@ import {
 import { FarmerService } from './farmer.service';
 import { FarmerUpdateDto } from './dtos/farmer.update.dto';
 import { FarmerParamsDto, FarmerQueryDto } from './dtos/farmer.query.dto';
+import { FarmerCreateI } from './farmer.types';
 
 @Controller({ path: 'farmer', version: '1' })
 export class FarmerController {
   constructor(private readonly farmerService: FarmerService) {}
+
 
   @Get()
   async getAll(@Query() query: FarmerQueryDto) {
@@ -42,4 +44,7 @@ export class FarmerController {
   async delete(@Param() params: FarmerParamsDto) {
     return this.farmerService.deleteById(params.farmer);
   }
+
+  
 }
+
