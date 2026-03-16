@@ -1,0 +1,9 @@
+export const LEGACY_UPLOAD_MAX_FILE_SIZE_BYTES = 10 * 1024 * 1024;
+export const LEGACY_UPLOAD_MAX_FILES = 10;
+
+export const LEGACY_UPLOAD_MULTER_OPTIONS = {
+  limits: {
+    fileSize: LEGACY_UPLOAD_MAX_FILE_SIZE_BYTES,
+    files: LEGACY_UPLOAD_MAX_FILES,
+  },
+};

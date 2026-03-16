@@ -39,7 +39,7 @@ export class HarvestDetails {
 
 @Schema({ _id: false })
 export class CommissionDetails {
-  @Prop({ enum: ProjectCommissionType })
+  @Prop({ type: String, enum: ProjectCommissionType })
   readonly commissionType: ProjectCommissionType;
 
   @Prop()
@@ -56,7 +56,7 @@ export class FarmerProject extends Document {
   @Prop({ type: Types.ObjectId, ref: Farmer.name })
   readonly farmer: Farmer;
 
-  @Prop({ enum: ProjectType })
+  @Prop({ type: String, enum: ProjectType })
   readonly type: ProjectType;
 
   @Prop()
@@ -84,6 +84,7 @@ export class FarmerProject extends Document {
   readonly endDate: Date;
 
   @Prop({
+    type: String,
     enum: ProjectStatus,
     default: ProjectStatus.DRAFT,
   })

@@ -28,4 +28,5 @@ export const validationSchema = Joi.object({
   AZURE_STORAGE_ACCOUNT_NAME: Joi.string().required(),
   AZURE_STORAGE_ACCOUNT_KEY: Joi.string().required(),
   AZURE_STORAGE_CONTAINER_NAME: Joi.string().default('files'),
+  AZURE_UPLOAD_SAS_EXPIRATION_MINUTES: Joi.number().default(15),
 });

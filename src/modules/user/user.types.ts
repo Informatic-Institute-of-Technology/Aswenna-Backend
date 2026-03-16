@@ -1,3 +1,5 @@
+import { UserImageTarget } from './schemas/user.schema';
+
 export interface PersonalInfoI {
   readonly nicNumber: string;
   readonly gender: string;
@@ -91,4 +93,21 @@ export interface UserUpdateI {
   readonly farmerDetails?: FarmerDetailsI;
   readonly investorDetails?: InvestorDetailsI;
   readonly landOwnerDetails?: LandOwnerDetailsUpdateI;
+}
+
+export interface UserUploadRequestHeadersI {
+  'Content-Type': string;
+  'x-ms-blob-type': 'BlockBlob';
+}
+
+export interface UserUploadRequestResponseFileI {
+  readonly target: UserImageTarget;
+  readonly fileName: string;
+  readonly uploadUrl: string;
+  readonly method: 'PUT';
+  readonly headers: UserUploadRequestHeadersI;
+}
+
+export interface UserUploadRequestResponseI {
+  readonly files: UserUploadRequestResponseFileI[];
 }

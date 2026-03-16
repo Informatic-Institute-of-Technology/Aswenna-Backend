@@ -29,5 +29,8 @@ export default () => ({
     storageAccountName: process.env.AZURE_STORAGE_ACCOUNT_NAME,
     storageAccountKey: process.env.AZURE_STORAGE_ACCOUNT_KEY,
     containerName: process.env.AZURE_STORAGE_CONTAINER_NAME || 'files',
+    uploadSasExpirationMinutes: process.env.AZURE_UPLOAD_SAS_EXPIRATION_MINUTES
+      ? parseInt(process.env.AZURE_UPLOAD_SAS_EXPIRATION_MINUTES, 10)
+      : 15,
   },
 });
