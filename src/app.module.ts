@@ -17,6 +17,7 @@ import { MailModule } from './config/mail/mail.module';
 import { NotificationModule } from './modules/notification/notification.module';
 import { FileUploadModule } from './modules/file-upload/file-upload.module';
 import { ScheduleModule } from '@nestjs/schedule';
+import { FarmerAdsModule } from './modules/farmer/farmer-ads.module';
 
 @Module({
   imports: [
@@ -38,6 +39,7 @@ import { ScheduleModule } from '@nestjs/schedule';
     NotificationModule,
     MailModule,
     FileUploadModule,
+    FarmerAdsModule,
   ],
 })
 export class AppModule {}
