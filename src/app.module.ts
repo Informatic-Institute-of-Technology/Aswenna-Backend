@@ -17,6 +17,9 @@ import { MailModule } from './config/mail/mail.module';
 import { NotificationModule } from './modules/notification/notification.module';
 import { FileUploadModule } from './modules/file-upload/file-upload.module';
 import { ScheduleModule } from '@nestjs/schedule';
+import { ConversationsModule } from './modules/conversations/conversations.module';
+import { MessagesModule } from './modules/messages/messages.module';
+import { ChatModule } from './modules/chat/chat.module';
 
 @Module({
   imports: [
@@ -38,6 +41,9 @@ import { ScheduleModule } from '@nestjs/schedule';
     NotificationModule,
     MailModule,
     FileUploadModule,
+    ConversationsModule,
+    MessagesModule,
+    ChatModule,
   ],
 })
 export class AppModule {}
