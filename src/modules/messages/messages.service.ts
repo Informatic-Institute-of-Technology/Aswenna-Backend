@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
+import { PaginatedResponseType } from 'src/common/interfaces/response.types';
 import { ConversationsService } from '../conversations/conversations.service';
 import { GetMessagesQueryDto } from './dtos/get-messages.query.dto';
 import { SendMessageDto } from './dtos/send-message.dto';
@@ -18,7 +19,7 @@ export class MessagesService {
     actorUserId: string,
     conversationId: string,
     query: GetMessagesQueryDto,
-  ) {
+  ): Promise<PaginatedResponseType<Message[]>> {
     this.assertObjectId(conversationId, 'Invalid conversation id');
     await this.conversationsService.ensureMember(conversationId, actorUserId);
 
@@ -35,15 +36,23 @@ export class MessagesService {
         .skip((page - 1) * limit)
         .limit(limit)
         .populate('senderId', '_id fullName email auth0Id')
-        .lean(),
+        .exec(),
     ]);
 
+    const totalPages = Math.ceil(total / limit);
+
     return {
-      page,
-      limit,
-      total,
-      totalPages: Math.ceil(total / limit),
-      items,
+      data: items,
+      pagination: {
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1,
+        limit,
+        nextPage: page + 1,
+        page,
+        prevPage: page - 1,
+        totalDocs: total,
+        totalPages,
+      },
     };
   }
 
