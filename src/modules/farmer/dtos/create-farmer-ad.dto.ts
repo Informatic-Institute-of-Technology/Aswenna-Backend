@@ -1,18 +1,22 @@
-import { IsString, IsNumber, IsOptional, IsArray, ValidateNested } from 'class-validator';
+import {
+  IsString,
+  IsNumber,
+  IsOptional,
+  IsArray,
+  ValidateNested,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
-export class HarvestDetailsDto {
 
+export class HarvestDetailsDto {
   @IsNumber()
   expectedHarvest: number;
 
   @IsNumber()
   expectedLandArea: number;
-
 }
 
 export class CommissionDetailsDto {
-
   @IsNumber()
   commissionPercentage: number;
 
@@ -21,11 +25,23 @@ export class CommissionDetailsDto {
 
   @IsNumber()
   noOfInstallments: number;
-
 }
 
-export class CreateFarmerAdDto {
 
+export class CostBreakdownItemDto {
+  @IsString()
+  category: string;
+
+  @IsString()
+  description: string;
+
+  @IsNumber()
+  estimatedCost: number;
+}
+
+
+
+export class CreateFarmerAdDto {
   @IsString()
   offerType: 'harvest' | 'commission';
 
@@ -50,11 +66,21 @@ export class CreateFarmerAdDto {
   @IsString()
   farmingMethods: string;
 
+  @IsOptional()
   @IsString()
   agreementType: string;
 
   @IsArray()
   preferredRegions: string[];
+
+ 
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CostBreakdownItemDto)
+  costBreakdown: CostBreakdownItemDto[];
+
+  @IsNumber()
+  totalInvestmentRequired: number;
 
   @IsOptional()
   @ValidateNested()
@@ -65,5 +91,4 @@ export class CreateFarmerAdDto {
   @ValidateNested()
   @Type(() => CommissionDetailsDto)
   commissionBasedDetails?: CommissionDetailsDto;
-
 }
