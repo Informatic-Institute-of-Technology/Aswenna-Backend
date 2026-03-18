@@ -18,6 +18,9 @@ import { NotificationModule } from './modules/notification/notification.module';
 import { FileUploadModule } from './modules/file-upload/file-upload.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { FarmerAdsModule } from './modules/farmer/farmer-ads.module';
+import { ConversationsModule } from './modules/conversations/conversations.module';
+import { MessagesModule } from './modules/messages/messages.module';
+import { ChatModule } from './modules/chat/chat.module';
 
 @Module({
   imports: [
@@ -40,6 +43,9 @@ import { FarmerAdsModule } from './modules/farmer/farmer-ads.module';
     MailModule,
     FileUploadModule,
     FarmerAdsModule,
+    ConversationsModule,
+    MessagesModule,
+    ChatModule,
   ],
 })
 export class AppModule {}

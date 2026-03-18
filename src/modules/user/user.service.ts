@@ -311,7 +311,10 @@ export class UserService {
       body.files.map((file) => file.target),
     );
 
-    const uploadsByTarget = new Map<UserImageTarget, UploadedFileDescriptor[]>();
+    const uploadsByTarget = new Map<
+      UserImageTarget,
+      UploadedFileDescriptor[]
+    >();
 
     for (const file of body.files) {
       const targetContext = targetContexts.get(file.target);
@@ -358,7 +361,10 @@ export class UserService {
       Array.from(groupedFiles.keys()),
     );
 
-    const uploadsByTarget = new Map<UserImageTarget, UploadedFileDescriptor[]>();
+    const uploadsByTarget = new Map<
+      UserImageTarget,
+      UploadedFileDescriptor[]
+    >();
 
     for (const [target, targetFiles] of groupedFiles) {
       const targetContext = targetContexts.get(target);
@@ -623,7 +629,7 @@ export class UserService {
     const updateField = this.buildLandOwnerUpdateField(target);
     const existingFiles =
       target === UserImageTarget.LAND_IMAGES
-        ? landOwner.landAddress?.landImages ?? []
+        ? (landOwner.landAddress?.landImages ?? [])
         : this.compactFiles([landOwner.landAddress?.bimsaviyaCertificate]);
 
     return {
@@ -731,8 +737,7 @@ export class UserService {
   private getUserRoleName(user: User): string {
     const roleName = user.role?.name?.toLowerCase();
 
-    if (!roleName)
-      throw new BadRequestException(T.userRoleRequiredForUploads);
+    if (!roleName) throw new BadRequestException(T.userRoleRequiredForUploads);
 
     return roleName;
   }
