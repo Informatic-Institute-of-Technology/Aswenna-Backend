@@ -16,6 +16,7 @@ import {
   ResponseType,
 } from 'src/common/interfaces/response.types';
 import { UserService } from 'src/modules/user/user.service';
+import { UserReal } from 'src/core/decorators/user.decorators';
 
 const T = {
   projectNotFoundById: (id: string) => `Project with ID ${id} not found`,
@@ -34,7 +35,9 @@ export class ProjectService {
     limit: number,
     search: string,
     sort: string,
+    user: UserReal,
   ): Promise<PaginatedResponseType<FarmerProject[]>> {
+    const userId = user.user || user.userId || user.sub;
     const sortOptions: Record<string, 'asc' | 'desc'> = {};
     if (sort)
       sort.split(',').forEach((field) => {
@@ -44,6 +47,16 @@ export class ProjectService {
       });
 
     const filter: FilterQuery<FarmerProject> = {};
+
+    if (userId) {
+      const selectedUser = await this.userService.findById(userId);
+      const roleName = selectedUser?.role?.name?.toLowerCase?.();
+
+      if (roleName === 'farmer') {
+        Object.assign(filter, { farmer: new Types.ObjectId(userId) });
+      }
+    }
+
     if (search)
       filter.$or = [
         { projectName: { $regex: search, $options: 'i' } },
