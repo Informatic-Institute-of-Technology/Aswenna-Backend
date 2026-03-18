@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 
@@ -13,8 +17,10 @@ export class FarmerAdsService {
     private readonly farmerAdModel: Model<FarmerAd>,
   ) {}
 
- 
-  async createFarmerAd(dto: CreateFarmerAdDto, userId: string): Promise<FarmerAd> {
+  async createFarmerAd(
+    dto: CreateFarmerAdDto,
+    userId: string,
+  ): Promise<FarmerAd> {
     const data = this.mapDtoToSchema(dto, userId);
     const ad = new this.farmerAdModel(data);
     return ad.save();
@@ -24,12 +30,10 @@ export class FarmerAdsService {
     return this.farmerAdModel.find().sort({ createdAt: -1 }).exec();
   }
 
-  
   async findByUserId(userId: string) {
     return this.farmerAdModel.find({ userId }).exec();
   }
 
- 
   async findOne(id: string) {
     const ad = await this.farmerAdModel.findById(id).exec();
     if (!ad) {
@@ -39,9 +43,10 @@ export class FarmerAdsService {
   }
 
   async update(id: string, dto: UpdateFarmerAdDto) {
-   
-    const updateData = dto.offerType ? this.mapDtoToSchema(dto as any) : dto;
-    
+    const updateData = dto.offerType
+      ? this.mapDtoToSchema(dto as any)
+      : dto;
+
     const updatedAd = await this.farmerAdModel
       .findByIdAndUpdate(id, { $set: updateData }, { new: true })
       .exec();
@@ -52,17 +57,29 @@ export class FarmerAdsService {
     return updatedAd;
   }
 
- 
   async remove(id: string) {
-    const result = await this.farmerAdModel.findByIdAndDelete(id).exec();
+    const result = await this.farmerAdModel
+      .findByIdAndDelete(id)
+      .exec();
+
     if (!result) {
       throw new NotFoundException(`Delete failed: Ad ${id} not found`);
     }
+
     return { deleted: true, id };
   }
 
-  
+ 
   private mapDtoToSchema(dto: CreateFarmerAdDto, userId?: string) {
+    if (!dto.costBreakdown || dto.costBreakdown.length === 0) {
+      throw new BadRequestException('Cost breakdown is required');
+    }
+
+    const total = dto.costBreakdown.reduce(
+      (sum, item) => sum + item.estimatedCost,
+      0,
+    );
+
     const data: any = {
       ...(userId && { userId }),
       projectName: dto.projectName,
@@ -75,19 +92,31 @@ export class FarmerAdsService {
       agreementType: dto.agreementType,
       preferredRegions: dto.preferredRegions,
       offerType: dto.offerType,
+
+      costBreakdown: dto.costBreakdown,
+      totalInvestmentRequired: total,
     };
 
     if (dto.offerType === 'harvest') {
-      data.expectedHarvest = dto.harvestBasedDetails?.expectedHarvest;
-      data.expectedLandArea = dto.harvestBasedDetails?.expectedLandArea;
-      
+      data.expectedHarvest =
+        dto.harvestBasedDetails?.expectedHarvest;
+
+      data.expectedLandArea =
+        dto.harvestBasedDetails?.expectedLandArea;
+
       data.commissionPercentage = null;
       data.investmentAmount = null;
+      data.noOfInstallments = null;
     } else if (dto.offerType === 'commission') {
-      data.commissionPercentage = dto.commissionBasedDetails?.commissionPercentage;
-      data.investmentAmount = dto.commissionBasedDetails?.investmentAmount;
-      data.noOfInstallments = dto.commissionBasedDetails?.noOfInstallments;
-      
+      data.commissionPercentage =
+        dto.commissionBasedDetails?.commissionPercentage;
+
+      data.investmentAmount =
+        dto.commissionBasedDetails?.investmentAmount;
+
+      data.noOfInstallments =
+        dto.commissionBasedDetails?.noOfInstallments;
+
       data.expectedHarvest = null;
       data.expectedLandArea = null;
     }
