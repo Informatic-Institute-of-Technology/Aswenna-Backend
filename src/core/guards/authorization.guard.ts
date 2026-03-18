@@ -4,15 +4,15 @@ import {
   Injectable,
   UnauthorizedException,
 } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import { Reflector } from '@nestjs/core';
 import { Request } from 'express';
-import { JwtService } from '@nestjs/jwt';
 import { IS_PUBLIC_KEY } from '../decorators/public.decorator';
 
 // Augment Express Request to include `user`
 declare module 'express' {
   interface Request {
-    user: { sub: string; [key: string]: any };
+    user: { sub: string; userId?: string; [key: string]: any };
   }
 }
 
@@ -37,15 +37,25 @@ export class AuthorizationGuard implements CanActivate {
       throw new UnauthorizedException('Missing Authorization header');
     }
 
-    const token = authorization.split(' ')[1];
+    const token = authorization.replace(/^Bearer\s+/i, '').trim();
     if (!token) throw new UnauthorizedException('Invalid Authorization header');
 
     try {
-      const payload = await this.jwtService.verifyAsync(token);
-      request.user = payload;
+      const payload =
+        await this.jwtService.verifyAsync<Record<string, unknown>>(token);
+      const sub = typeof payload.sub === 'string' ? payload.sub : undefined;
+      if (!sub) {
+        throw new UnauthorizedException('Token subject is missing');
+      }
+
+      request.user = {
+        ...payload,
+        sub,
+        userId: sub,
+      };
+
       return true;
-    } catch (error) {
-      console.log('JWT verification failed:', error);
+    } catch {
       throw new UnauthorizedException('Invalid or expired token');
     }
   }
