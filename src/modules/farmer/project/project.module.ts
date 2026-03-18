@@ -6,14 +6,14 @@ import {
   FarmerProject,
   FarmerProjectSchema,
 } from '../schemas/farmer-project.schema';
-import { FarmerModule } from '../farmer.module';
+import { UserModule } from 'src/modules/user/user.module';
 
 @Module({
   imports: [
     MongooseModule.forFeature([
       { name: FarmerProject.name, schema: FarmerProjectSchema },
     ]),
-    forwardRef(() => FarmerModule),
+    forwardRef(() => UserModule),
   ],
   controllers: [ProjectController],
   providers: [ProjectService],

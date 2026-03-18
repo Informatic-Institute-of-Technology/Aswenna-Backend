@@ -1,5 +1,7 @@
 import {
   IsOptional,
+  IsArray,
+  IsMongoId,
   IsString,
   IsNumber,
   IsDateString,
@@ -9,13 +11,26 @@ import {
   IsEnum,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { HarvestDetailsDto, CommissionDetailsDto } from './project.create.dto';
-import { ProjectStatus } from '../project.types';
+import {
+  HarvestDetailsDto,
+  CommissionDetailsDto,
+  CostBreakdownItemDto,
+  MilestoneBreakdownItemDto,
+} from './project.create.dto';
+import { ProjectStatus, ProjectType } from '../project.types';
 
 export class ProjectUpdateDto {
   @IsOptional()
+  @IsMongoId()
+  readonly user?: string;
+
+  @IsOptional()
+  @IsEnum(ProjectType)
+  readonly offerType: ProjectType;
+
+  @IsOptional()
   @IsString()
-  readonly title: string;
+  readonly projectName: string;
 
   @IsOptional()
   @IsString()
@@ -27,27 +42,62 @@ export class ProjectUpdateDto {
 
   @IsOptional()
   @IsString()
+  readonly cropIcon: string;
+
+  @IsOptional()
+  @IsString()
+  readonly backgroundImage: string;
+
+  @IsOptional()
+  @IsString()
   readonly location: string;
 
   @IsOptional()
-  @IsNumber()
-  readonly investmentRequired: number;
+  @IsString()
+  readonly farmingMethods: string;
+
+  @IsOptional()
+  @IsArray()
+  @IsString({ each: true })
+  readonly preferredRegions: string[];
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CostBreakdownItemDto)
+  readonly costBreakdown: CostBreakdownItemDto[];
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => MilestoneBreakdownItemDto)
+  readonly milestoneBreakdown: MilestoneBreakdownItemDto[];
 
   @IsOptional()
   @IsNumber()
-  readonly expectedROI: number;
+  readonly totalInvestmentRequired: number;
 
   @IsOptional()
   @IsDateString()
-  readonly startDate: Date;
+  readonly effectiveDateFrom: Date;
 
   @IsOptional()
   @IsDateString()
-  readonly endDate: Date;
+  readonly effectiveDateTo: Date;
 
   @IsOptional()
   @IsBoolean()
   readonly visibility: boolean;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => HarvestDetailsDto)
+  readonly harvestBasedDetails: HarvestDetailsDto;
+
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => CommissionDetailsDto)
+  readonly commissionBasedDetails: CommissionDetailsDto;
 
   @IsOptional()
   @ValidateNested()
