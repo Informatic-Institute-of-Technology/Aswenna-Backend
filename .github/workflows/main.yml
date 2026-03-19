@@ -8,7 +8,6 @@ on:
 
 env:
   AZURE_WEBAPP_NAME: api-aswenna-prod
-  AZURE_WEBAPP_PACKAGE_PATH: '.'
   NODE_VERSION: '20.x'
 
 jobs:
@@ -16,38 +15,35 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      - uses: actions/setup-node@v4
         with:
           node-version: ${{ env.NODE_VERSION }}
+          cache: 'npm'
 
-      - name: Install dependencies
-        run: npm install 
+      - run: npm ci
 
-      - name: Build application
-        run: npm run build
+      - run: npm run build
 
-   
-
-      - name: Create deployment package
+      - name: Prepare deployment package
         run: |
-          mkdir -p deploy
+          mkdir deploy
           cp -r dist deploy/
-          cp package.json deploy/
-          # cp yarn.lock deploy/
-          cp .env.production deploy/ || true
-          cd deploy && npm install --production
+          cp package.json package-lock.json deploy/
+          cd deploy && npm ci --omit=dev
 
-      - name: Deploy to Azure Web App
+      - name: Deploy to Azure
         uses: azure/webapps-deploy@v3
         with:
           app-name: ${{ env.AZURE_WEBAPP_NAME }}
           publish-profile: ${{ secrets.AZURE_WEBAPP_PUBLISH_PROFILE }}
-          package: ${{ env.AZURE_WEBAPP_PACKAGE_PATH }}/deploy
+          package: deploy
 
-      - name: Notify deployment status
-        if: always()
-        run: echo "Deployment completed"
+      - name: Deployment success
+        if: success()
+        run: echo "✅ Deployment succeeded"
+
+      - name: Deployment failed
+        if: failure()
+        run: echo "❌ Deployment failed"
