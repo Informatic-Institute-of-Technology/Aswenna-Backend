@@ -1,11 +1,16 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
-import { Farmer } from './farmer.schema';
 import { Meta } from 'src/common/schemas/meta.schema';
+import { User } from 'src/modules/user/schemas/user.schema';
 
 export enum ProjectType {
-  HARVEST = 'HARVEST',
-  COMMISSION = 'COMMISSION',
+  HARVEST = 'harvest',
+  COMMISSION = 'commission',
+}
+
+export enum ProjectLandAvailability {
+  WITH_LAND = 'with_land',
+  WITHOUT_LAND = 'without_land',
 }
 
 export enum ProjectStatus {
@@ -17,50 +22,69 @@ export enum ProjectStatus {
   ARCHIVED = 'ARCHIVED',
 }
 
-export enum ProjectCommissionType {
-  FIXED = 'FIXED',
-  PERCENTAGE = 'PERCENTAGE',
+@Schema({ _id: false })
+export class CostBreakdownItem {
+  @Prop()
+  readonly category: string;
+
+  @Prop()
+  readonly description: string;
+
+  @Prop()
+  readonly estimatedCost: number;
 }
 
 @Schema({ _id: false })
-export class HarvestDetails {
+export class MilestoneBreakdownItem {
   @Prop()
-  readonly expectedYield: number;
+  readonly milestone: string;
 
   @Prop()
-  readonly yieldUnit: string;
+  readonly description: string;
 
   @Prop()
-  readonly investorSharePercentage: number;
-
-  @Prop()
-  readonly riskLevel: string;
+  readonly estimatedAmount: number;
 }
 
 @Schema({ _id: false })
-export class CommissionDetails {
-  @Prop({ enum: ProjectCommissionType })
-  readonly commissionType: ProjectCommissionType;
+export class HarvestBasedDetails {
+  @Prop()
+  readonly expectedHarvest: number;
 
   @Prop()
-  readonly commissionValue: number;
+  readonly expectedLandArea: number;
+}
+
+@Schema({ _id: false })
+export class CommissionBasedDetails {
+  @Prop()
+  readonly commissionPercentage: number;
 
   @Prop()
-  readonly serviceDescription: string;
+  readonly investmentAmount: number;
+
+  @Prop()
+  readonly noOfInstallments: number;
+
+  @Prop()
+  readonly expectedLandArea: number;
 }
 
 @Schema({ timestamps: true })
 export class FarmerProject extends Document {
   declare readonly _id: Types.ObjectId;
 
-  @Prop({ type: Types.ObjectId, ref: Farmer.name })
-  readonly farmer: Farmer;
+  @Prop({ type: Types.ObjectId, ref: User.name })
+  readonly farmer: User;
 
-  @Prop({ enum: ProjectType })
-  readonly type: ProjectType;
+  @Prop({ type: String, enum: ProjectType })
+  readonly offerType: ProjectType;
+
+  @Prop({ type: String, enum: ProjectLandAvailability })
+  readonly landAvailability: ProjectLandAvailability;
 
   @Prop()
-  readonly title: string;
+  readonly projectName: string;
 
   @Prop()
   readonly description: string;
@@ -69,21 +93,37 @@ export class FarmerProject extends Document {
   readonly cropType: string;
 
   @Prop()
+  readonly cropIcon: string;
+
+  @Prop()
+  readonly backgroundImage: string;
+
+  @Prop()
   readonly location: string;
 
   @Prop()
-  readonly investmentRequired: number;
+  readonly farmingMethods: string;
+
+  @Prop([String])
+  readonly preferredRegions: string[];
+
+  @Prop([CostBreakdownItem])
+  readonly costBreakdown: CostBreakdownItem[];
+
+  @Prop([MilestoneBreakdownItem])
+  readonly milestoneBreakdown: MilestoneBreakdownItem[];
 
   @Prop()
-  readonly expectedROI: number;
+  readonly totalInvestmentRequired: number;
 
   @Prop()
-  readonly startDate: Date;
+  readonly effectiveDateFrom: Date;
 
   @Prop()
-  readonly endDate: Date;
+  readonly effectiveDateTo: Date;
 
   @Prop({
+    type: String,
     enum: ProjectStatus,
     default: ProjectStatus.DRAFT,
   })
@@ -92,11 +132,11 @@ export class FarmerProject extends Document {
   @Prop({ default: true })
   readonly visibility: boolean;
 
-  @Prop(HarvestDetails)
-  readonly harvestDetails?: HarvestDetails;
+  @Prop(HarvestBasedDetails)
+  readonly harvestBasedDetails?: HarvestBasedDetails;
 
-  @Prop(CommissionDetails)
-  readonly commissionDetails?: CommissionDetails;
+  @Prop(CommissionBasedDetails)
+  readonly commissionBasedDetails?: CommissionBasedDetails;
 
   @Prop([Meta])
   readonly meta: Meta[];

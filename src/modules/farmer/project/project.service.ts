@@ -1,8 +1,10 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types, FilterQuery } from 'mongoose';
+import { Model, Types, FilterQuery, UpdateQuery } from 'mongoose';
 import { FarmerProject } from '../schemas/farmer-project.schema';
 import {
+  CommissionBasedDetailsI,
+  HarvestBasedDetailsI,
   ProjectCreateI,
   ProjectUpdateI,
   ProjectStatus,
@@ -13,7 +15,8 @@ import {
   PaginatedResponseType,
   ResponseType,
 } from 'src/common/interfaces/response.types';
-import { FarmerService } from '../farmer.service';
+import { UserService } from 'src/modules/user/user.service';
+import { UserReal } from 'src/core/decorators/user.decorators';
 
 const T = {
   projectNotFoundById: (id: string) => `Project with ID ${id} not found`,
@@ -24,7 +27,7 @@ export class ProjectService {
   constructor(
     @InjectModel(FarmerProject.name)
     private readonly projectModel: Model<FarmerProject>,
-    private readonly farmerService: FarmerService,
+    private readonly userService: UserService,
   ) {}
 
   async findAll(
@@ -32,7 +35,9 @@ export class ProjectService {
     limit: number,
     search: string,
     sort: string,
+    user: UserReal,
   ): Promise<PaginatedResponseType<FarmerProject[]>> {
+    const userId = user.user || user.userId || user.sub;
     const sortOptions: Record<string, 'asc' | 'desc'> = {};
     if (sort)
       sort.split(',').forEach((field) => {
@@ -42,9 +47,19 @@ export class ProjectService {
       });
 
     const filter: FilterQuery<FarmerProject> = {};
+
+    if (userId) {
+      const selectedUser = await this.userService.findById(userId);
+      const roleName = selectedUser?.role?.name?.toLowerCase?.();
+
+      if (roleName === 'farmer') {
+        Object.assign(filter, { farmer: new Types.ObjectId(userId) });
+      }
+    }
+
     if (search)
       filter.$or = [
-        { title: { $regex: search, $options: 'i' } },
+        { projectName: { $regex: search, $options: 'i' } },
         { description: { $regex: search, $options: 'i' } },
         { cropType: { $regex: search, $options: 'i' } },
         { location: { $regex: search, $options: 'i' } },
@@ -58,11 +73,7 @@ export class ProjectService {
         .limit(limit)
         .populate({
           path: 'farmer',
-          select: 'user regions experience',
-          populate: {
-            path: 'user',
-            select: 'fullName email',
-          },
+          select: 'fullName email',
         })
         .exec(),
       this.projectModel.countDocuments(filter).exec(),
@@ -90,11 +101,7 @@ export class ProjectService {
       .findById(target)
       .populate({
         path: 'farmer',
-        select: 'user regions experience',
-        populate: {
-          path: 'user',
-          select: 'fullName email',
-        },
+        select: 'fullName email',
       })
       .exec();
 
@@ -104,24 +111,44 @@ export class ProjectService {
   }
 
   async create(project: ProjectCreateI): Promise<FarmerProject> {
-    await this.farmerService.findById(project.farmer);
+    await this.userService.findById(project.farmer);
 
-    if (project.type === ProjectType.HARVEST && !project.harvestDetails)
-      throw new BadRequestException(
-        'Harvest details are required for HARVEST type projects',
-      );
+    const offerType = project.offerType;
+    const harvestBasedDetails = project.harvestBasedDetails;
+    const commissionBasedDetails = project.commissionBasedDetails;
 
-    if (project.type === ProjectType.COMMISSION && !project.commissionDetails)
-      throw new BadRequestException(
-        'Commission details are required for COMMISSION type projects',
-      );
+    // if (offerType === ProjectType.HARVEST && !harvestBasedDetails)
+    //   throw new BadRequestException(
+    //     'Harvest based details are required for harvest offer type projects',
+    //   );
 
-    return await this.projectModel.create({
+    // if (offerType === ProjectType.COMMISSION && !commissionBasedDetails)
+    //   throw new BadRequestException(
+    //     'Commission based details are required for commission offer type projects',
+    //   );
+
+    const payload: Omit<ProjectCreateI, 'farmer'> & {
+      farmer: Types.ObjectId;
+      status: ProjectStatus;
+      visibility: boolean;
+      harvestBasedDetails?: HarvestBasedDetailsI;
+      commissionBasedDetails?: CommissionBasedDetailsI;
+    } = {
       ...project,
+      offerType,
+      harvestBasedDetails,
+      commissionBasedDetails,
       farmer: new Types.ObjectId(project.farmer),
       status: ProjectStatus.DRAFT,
       visibility: project.visibility ?? true,
-    });
+    };
+
+    if (offerType === ProjectType.HARVEST)
+      delete payload.commissionBasedDetails;
+    if (offerType === ProjectType.COMMISSION)
+      delete payload.harvestBasedDetails;
+
+    return await this.projectModel.create(payload);
   }
 
   async updateById(
@@ -129,6 +156,21 @@ export class ProjectService {
     project: ProjectUpdateI,
   ): Promise<FarmerProject> {
     const selectedProject = await this.findById(target);
+    const projectWithOwner = project as ProjectUpdateI & {
+      farmer?: string;
+      user?: string;
+    };
+    const farmerId = projectWithOwner.farmer ?? projectWithOwner.user;
+    const projectWithoutOwner: Record<string, unknown> = {
+      ...projectWithOwner,
+    };
+
+    delete (projectWithoutOwner as { farmer?: string }).farmer;
+    delete (projectWithoutOwner as { user?: string }).user;
+
+    if (farmerId) {
+      await this.userService.findById(farmerId);
+    }
 
     if (
       (selectedProject.status as ProjectStatus) !== ProjectStatus.DRAFT &&
@@ -138,14 +180,46 @@ export class ProjectService {
         'Project can only be updated in DRAFT or IN REVIEW status',
       );
 
+    const offerType = project.offerType ?? selectedProject.offerType;
+    const harvestBasedDetails =
+      project.harvestBasedDetails ?? selectedProject.harvestBasedDetails;
+    const commissionBasedDetails =
+      project.commissionBasedDetails ?? selectedProject.commissionBasedDetails;
+
+    if (offerType === ProjectType.HARVEST && !harvestBasedDetails)
+      throw new BadRequestException(
+        'Harvest based details are required for harvest offer type projects',
+      );
+
+    if (offerType === ProjectType.COMMISSION && !commissionBasedDetails)
+      throw new BadRequestException(
+        'Commission based details are required for commission offer type projects',
+      );
+
+    const updatePayload: Record<string, unknown> = {
+      ...projectWithoutOwner,
+      offerType,
+      harvestBasedDetails,
+      commissionBasedDetails,
+    };
+
+    if (farmerId) {
+      updatePayload.farmer = new Types.ObjectId(String(farmerId));
+    }
+
+    if (offerType === ProjectType.HARVEST)
+      delete updatePayload.commissionBasedDetails;
+    if (offerType === ProjectType.COMMISSION)
+      delete updatePayload.harvestBasedDetails;
+
     const updatedProject = await this.projectModel
-      .findByIdAndUpdate(target, project, {
+      .findByIdAndUpdate(target, updatePayload as UpdateQuery<FarmerProject>, {
         new: true,
       })
       .exec();
 
     if (!updatedProject)
-      throw new BadRequestException('T.projectNotFoundById(target)');
+      throw new BadRequestException(T.projectNotFoundById(target));
 
     return updatedProject;
   }

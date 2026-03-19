@@ -17,6 +17,8 @@ Upload files to Azure Blob Storage with support for folder organization.
 
 **Endpoint**: `POST /file-upload/upload`
 
+> Deprecated for large uploads. This route is now capped at `10MB` per file and `10` files per request. Prefer the direct-to-Azure upload flow for user files.
+
 **Query Parameters**:
 
 - `folderPath` (optional): Organize files in folders
@@ -148,6 +150,7 @@ Add the following to your `.env` file:
 AZURE_STORAGE_ACCOUNT_NAME=your-storage-account-name
 AZURE_STORAGE_ACCOUNT_KEY=your-storage-account-key
 AZURE_STORAGE_CONTAINER_NAME=files
+AZURE_UPLOAD_SAS_EXPIRATION_MINUTES=15
 ```
 
 ## Setup Instructions
@@ -214,7 +217,7 @@ All operations are logged using NestJS Logger:
 2. **Pre-Signed URLs**: Always set appropriate expiration times
 3. **Permissions**: Use read-only permissions for client-side access
 4. **Validation**: Validate file types before upload
-5. **Size Limits**: Implement file size restrictions in the controller
+5. **Size Limits**: Large uploads should bypass the API process by using short-lived Azure upload URLs
 
 ## Example: Upload with Folder Path
 

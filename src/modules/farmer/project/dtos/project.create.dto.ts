@@ -1,4 +1,6 @@
 import {
+  IsArray,
+  ArrayNotEmpty,
   IsNotEmpty,
   IsString,
   IsEnum,
@@ -8,40 +10,65 @@ import {
   IsBoolean,
   ValidateNested,
   IsMongoId,
+  ValidateIf,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { ProjectType } from '../project.types';
+import { ProjectLandAvailability, ProjectType } from '../project.types';
 
 export class HarvestDetailsDto {
   @IsNotEmpty()
   @IsNumber()
-  readonly expectedYield: number;
-
-  @IsNotEmpty()
-  @IsString()
-  readonly yieldUnit: string;
+  readonly expectedHarvest: number;
 
   @IsNotEmpty()
   @IsNumber()
-  readonly investorSharePercentage: number;
-
-  @IsNotEmpty()
-  @IsString()
-  readonly riskLevel: string;
+  readonly expectedLandArea: number;
 }
 
 export class CommissionDetailsDto {
   @IsNotEmpty()
-  @IsEnum(['FIXED', 'PERCENTAGE'])
-  readonly commissionType: 'FIXED' | 'PERCENTAGE';
+  @IsNumber()
+  readonly commissionPercentage: number;
 
   @IsNotEmpty()
   @IsNumber()
-  readonly commissionValue: number;
+  readonly investmentAmount: number;
+
+  @IsNotEmpty()
+  @IsNumber()
+  readonly noOfInstallments: number;
+
+  @IsNotEmpty()
+  @IsNumber()
+  readonly expectedLandArea: number;
+}
+
+export class CostBreakdownItemDto {
+  @IsNotEmpty()
+  @IsString()
+  readonly category: string;
 
   @IsNotEmpty()
   @IsString()
-  readonly serviceDescription: string;
+  readonly description: string;
+
+  @IsNotEmpty()
+  @IsNumber()
+  readonly estimatedCost: number;
+}
+
+export class MilestoneBreakdownItemDto {
+  @IsNotEmpty()
+  @IsString()
+  readonly milestone: string;
+
+  @IsNotEmpty()
+  @IsString()
+  readonly description: string;
+
+  @IsNotEmpty()
+  @IsNumber()
+  readonly estimatedAmount: number;
 }
 
 export class ProjectCreateDto {
@@ -51,11 +78,15 @@ export class ProjectCreateDto {
 
   @IsNotEmpty()
   @IsEnum(ProjectType)
-  readonly type: ProjectType;
+  readonly offerType: ProjectType;
+
+  @IsNotEmpty()
+  @IsEnum(ProjectLandAvailability)
+  readonly landAvailability: ProjectLandAvailability;
 
   @IsNotEmpty()
   @IsString()
-  readonly title: string;
+  readonly projectName: string;
 
   @IsNotEmpty()
   @IsString()
@@ -67,35 +98,60 @@ export class ProjectCreateDto {
 
   @IsNotEmpty()
   @IsString()
+  readonly cropIcon: string;
+
+  @IsNotEmpty()
+  @IsString()
+  readonly backgroundImage: string;
+
+  @IsNotEmpty()
+  @IsString()
   readonly location: string;
 
   @IsNotEmpty()
-  @IsNumber()
-  readonly investmentRequired: number;
+  @IsString()
+  readonly farmingMethods: string;
+
+  @IsArray()
+  @ArrayNotEmpty()
+  @IsString({ each: true })
+  readonly preferredRegions: string[];
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => CostBreakdownItemDto)
+  readonly costBreakdown: CostBreakdownItemDto[];
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => MilestoneBreakdownItemDto)
+  readonly milestoneBreakdown: MilestoneBreakdownItemDto[];
 
   @IsNotEmpty()
   @IsNumber()
-  readonly expectedROI: number;
+  readonly totalInvestmentRequired: number;
 
   @IsNotEmpty()
   @IsDateString()
-  readonly startDate: Date;
+  readonly effectiveDateFrom: Date;
 
   @IsNotEmpty()
   @IsDateString()
-  readonly endDate: Date;
+  readonly effectiveDateTo: Date;
 
   @IsOptional()
   @IsBoolean()
   readonly visibility: boolean;
 
-  @IsOptional()
+  @ValidateIf((o: ProjectCreateDto) => o.offerType === ProjectType.HARVEST)
   @ValidateNested()
   @Type(() => HarvestDetailsDto)
-  readonly harvestDetails: HarvestDetailsDto;
+  readonly harvestBasedDetails?: HarvestDetailsDto;
 
-  @IsOptional()
+  @ValidateIf((o: ProjectCreateDto) => o.offerType === ProjectType.COMMISSION)
   @ValidateNested()
   @Type(() => CommissionDetailsDto)
-  readonly commissionDetails: CommissionDetailsDto;
+  readonly commissionBasedDetails?: CommissionDetailsDto;
 }

@@ -13,7 +13,7 @@ export class Permission extends Document {
   @Prop()
   readonly description: string;
 
-  @Prop({ enum: PermissionType, default: PermissionType.API })
+  @Prop({ type: String, enum: PermissionType, default: PermissionType.API })
   readonly type: PermissionType;
 
   @Prop([Meta])

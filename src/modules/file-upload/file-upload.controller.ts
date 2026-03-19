@@ -8,6 +8,7 @@ import {
   HttpCode,
   HttpStatus,
   Query,
+  UseFilters,
 } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { AzureBlobStorageService } from '../../config/azure/services/azure-blob-storage.service';
@@ -20,15 +21,18 @@ import {
   DeleteFileResponse,
   PreSignedUrlResponse,
 } from '../../config/azure/types/azure-blob.types';
+import { LEGACY_UPLOAD_MULTER_OPTIONS } from 'src/common/constants/upload.constants';
+import { UploadLimitExceptionFilter } from 'src/common/filters/upload-limit-exception.filter';
 
 @Controller({ path: 'file-upload', version: '1' })
+@UseFilters(UploadLimitExceptionFilter)
 export class FileUploadController {
   constructor(
     private readonly azureBlobStorageService: AzureBlobStorageService,
   ) {}
 
   @Post('upload')
-  @UseInterceptors(FileInterceptor('file'))
+  @UseInterceptors(FileInterceptor('file', LEGACY_UPLOAD_MULTER_OPTIONS))
   @HttpCode(HttpStatus.CREATED)
   async uploadFile(
     @UploadedFile() file: any,

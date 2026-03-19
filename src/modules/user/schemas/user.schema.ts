@@ -36,7 +36,7 @@ export class PersonalInfo {
   @Prop()
   readonly nicNumber: string;
 
-  @Prop({ enum: Gender })
+  @Prop({ type: String, enum: Gender })
   readonly gender: Gender;
 
   @Prop(Date)
@@ -98,7 +98,7 @@ export class User extends Document {
   @Prop(Date)
   readonly termsAcceptedAt: Date;
 
-  @Prop({ enum: UserStatus, default: UserStatus.Pending })
+  @Prop({ type: String, enum: UserStatus, default: UserStatus.Pending })
   readonly status: UserStatus;
 
   @Prop({ type: Types.ObjectId, ref: Role.name })

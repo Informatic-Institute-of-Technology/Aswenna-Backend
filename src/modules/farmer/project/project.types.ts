@@ -1,6 +1,11 @@
 export enum ProjectType {
-  HARVEST = 'HARVEST',
-  COMMISSION = 'COMMISSION',
+  HARVEST = 'harvest',
+  COMMISSION = 'commission',
+}
+
+export enum ProjectLandAvailability {
+  WITH_LAND = 'with_land',
+  WITHOUT_LAND = 'without_land',
 }
 
 export enum ProjectStatus {
@@ -12,47 +17,72 @@ export enum ProjectStatus {
   ARCHIVED = 'ARCHIVED',
 }
 
-export interface HarvestDetailsI {
-  readonly expectedYield: number;
-  readonly yieldUnit: string;
-  readonly investorSharePercentage: number;
-  readonly riskLevel: string;
+export interface CostBreakdownItemI {
+  readonly category: string;
+  readonly description: string;
+  readonly estimatedCost: number;
 }
 
-export interface CommissionDetailsI {
-  readonly commissionType: 'FIXED' | 'PERCENTAGE';
-  readonly commissionValue: number;
-  readonly serviceDescription: string;
+export interface MilestoneBreakdownItemI {
+  readonly milestone: string;
+  readonly description: string;
+  readonly estimatedAmount: number;
+}
+
+export interface HarvestBasedDetailsI {
+  readonly expectedHarvest: number;
+  readonly expectedLandArea: number;
+}
+
+export interface CommissionBasedDetailsI {
+  readonly commissionPercentage: number;
+  readonly investmentAmount: number;
+  readonly noOfInstallments: number;
+  readonly expectedLandArea: number;
 }
 
 export interface ProjectCreateI {
   readonly farmer: string;
-  readonly type: ProjectType;
-  readonly title: string;
+  readonly offerType: ProjectType;
+  readonly landAvailability: ProjectLandAvailability;
+  readonly projectName: string;
   readonly description: string;
   readonly cropType: string;
+  readonly cropIcon: string;
+  readonly backgroundImage: string;
   readonly location: string;
-  readonly investmentRequired: number;
-  readonly expectedROI: number;
-  readonly startDate: Date;
-  readonly endDate: Date;
-  readonly visibility: boolean;
-  readonly harvestDetails: HarvestDetailsI;
-  readonly commissionDetails: CommissionDetailsI;
+  readonly farmingMethods: string;
+  readonly preferredRegions: string[];
+  readonly costBreakdown: CostBreakdownItemI[];
+  readonly milestoneBreakdown: MilestoneBreakdownItemI[];
+  readonly totalInvestmentRequired: number;
+  readonly effectiveDateFrom: Date;
+  readonly effectiveDateTo: Date;
+  readonly visibility?: boolean;
+  readonly harvestBasedDetails?: HarvestBasedDetailsI;
+  readonly commissionBasedDetails?: CommissionBasedDetailsI;
 }
 
 export interface ProjectUpdateI {
-  readonly title: string;
-  readonly description: string;
-  readonly cropType: string;
-  readonly location: string;
-  readonly investmentRequired: number;
-  readonly expectedROI: number;
-  readonly startDate: Date;
-  readonly endDate: Date;
-  readonly visibility: boolean;
-  readonly harvestDetails: HarvestDetailsI;
-  readonly commissionDetails: CommissionDetailsI;
+  readonly user?: string;
+  readonly offerType?: ProjectType;
+  readonly landAvailability?: ProjectLandAvailability;
+  readonly projectName?: string;
+  readonly description?: string;
+  readonly cropType?: string;
+  readonly cropIcon?: string;
+  readonly backgroundImage?: string;
+  readonly location?: string;
+  readonly farmingMethods?: string;
+  readonly preferredRegions?: string[];
+  readonly costBreakdown?: CostBreakdownItemI[];
+  readonly milestoneBreakdown?: MilestoneBreakdownItemI[];
+  readonly totalInvestmentRequired?: number;
+  readonly effectiveDateFrom?: Date;
+  readonly effectiveDateTo?: Date;
+  readonly visibility?: boolean;
+  readonly harvestBasedDetails?: HarvestBasedDetailsI;
+  readonly commissionBasedDetails?: CommissionBasedDetailsI;
 }
 
 export interface ProjectStatusUpdateI {

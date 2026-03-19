@@ -27,10 +27,11 @@ export class InteractionRequest extends Document {
   @Prop({ type: Types.ObjectId })
   readonly target: Types.ObjectId;
 
-  @Prop({ enum: RequestType })
+  @Prop({ type: String, enum: RequestType })
   readonly targetType: RequestType;
 
   @Prop({
+    type: String,
     enum: RequestStatus,
     default: RequestStatus.PENDING,
   })

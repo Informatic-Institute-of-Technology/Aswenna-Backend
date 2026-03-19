@@ -1,3 +1,5 @@
+import { UserImageTarget } from './schemas/user.schema';
+
 export interface PersonalInfoI {
   readonly nicNumber: string;
   readonly gender: string;
@@ -55,6 +57,19 @@ export interface LandOwnerDetailsI {
   readonly landAddress: LandAddressI;
 }
 
+export interface PersonalInfoUpdateI {
+  readonly address?: string;
+  readonly postalCode?: string;
+  readonly city?: string;
+  readonly province?: string;
+  readonly district?: string;
+}
+
+export interface LandOwnerDetailsUpdateI {
+  readonly dsDivision?: string;
+  readonly gnDivision?: string;
+}
+
 export interface UserCreateI {
   readonly fullName: string;
   readonly email: string;
@@ -70,8 +85,29 @@ export interface UserCreateI {
 }
 
 export interface UserUpdateI {
-  readonly fullName: string;
-  readonly address: string;
-  readonly phoneNumber: string;
-  readonly status: string;
+  readonly fullName?: string;
+  readonly phoneNumber?: string;
+  readonly phoneNumberVerified?: boolean;
+  readonly personalInfo?: PersonalInfoUpdateI;
+  readonly role?: string;
+  readonly farmerDetails?: FarmerDetailsI;
+  readonly investorDetails?: InvestorDetailsI;
+  readonly landOwnerDetails?: LandOwnerDetailsUpdateI;
+}
+
+export interface UserUploadRequestHeadersI {
+  'Content-Type': string;
+  'x-ms-blob-type': 'BlockBlob';
+}
+
+export interface UserUploadRequestResponseFileI {
+  readonly target: UserImageTarget;
+  readonly fileName: string;
+  readonly uploadUrl: string;
+  readonly method: 'PUT';
+  readonly headers: UserUploadRequestHeadersI;
+}
+
+export interface UserUploadRequestResponseI {
+  readonly files: UserUploadRequestResponseFileI[];
 }
