@@ -7,7 +7,9 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { Model, Types } from 'mongoose';
 import { PaginatedResponseType } from 'src/common/interfaces/response.types';
+import { AzureBlobStorageService } from 'src/config/azure/services/azure-blob-storage.service';
 import { User } from '../user/schemas/user.schema';
+import { Message } from '../messages/schemas/message.schema';
 import {
   AddConversationMemberDto,
   CreateGroupConversationDto,
@@ -27,6 +29,9 @@ export class ConversationsService {
     private readonly conversationModel: Model<Conversation>,
     @InjectModel(User.name)
     private readonly userModel: Model<User>,
+    @InjectModel(Message.name)
+    private readonly messageModel: Model<Message>,
+    private readonly azureBlobStorageService: AzureBlobStorageService,
   ) {}
 
   async ensureMember(conversationId: string, userId: string) {
@@ -63,10 +68,13 @@ export class ConversationsService {
 
     const existing = await this.conversationModel
       .findOne({ type: ConversationType.DIRECT, directKey })
-      .populate('members.userId', '_id fullName email auth0Id')
+      .populate(
+        'members.userId',
+        '_id fullName email auth0Id personalInfo.profilePicture.filename personalInfo.profilePicture.url',
+      )
       .lean();
 
-    if (existing) return existing;
+    if (existing) return this.attachMemberProfilePictureUrls(existing);
 
     const created = await this.conversationModel.create({
       type: ConversationType.DIRECT,
@@ -139,14 +147,19 @@ export class ConversationsService {
         .sort({ lastMessageAt: -1, updatedAt: -1 })
         .skip((page - 1) * limit)
         .limit(limit)
-        .populate('members.userId', '_id fullName email auth0Id')
+        .populate(
+          'members.userId',
+          '_id fullName email auth0Id personalInfo.profilePicture.filename',
+        )
         .exec(),
     ]);
 
     const totalPages = Math.ceil(total / limit);
+    const enrichedItems =
+      await this.attachMemberProfilePictureUrlsToList(items);
 
     return {
-      data: items,
+      data: enrichedItems,
       pagination: {
         hasNextPage: page < totalPages,
         hasPrevPage: page > 1,
@@ -172,15 +185,19 @@ export class ConversationsService {
         .sort({ lastMessageAt: -1, updatedAt: -1 })
         .skip((page - 1) * limit)
         .limit(limit)
-        .populate('members.userId', '_id fullName email auth0Id')
+        .populate(
+          'members.userId',
+          '_id fullName email auth0Id personalInfo.profilePicture.filename',
+        )
         .exec(),
       this.conversationModel.countDocuments({}),
     ]);
 
     const totalPages = Math.ceil(totalDocs / limit);
+    const enrichedItems = await this.attachMemberProfilePictureUrlsToList(data);
 
     return {
-      data,
+      data: enrichedItems,
       pagination: {
         hasNextPage: page < totalPages,
         hasPrevPage: page > 1,
@@ -210,14 +227,17 @@ export class ConversationsService {
     this.assertObjectId(conversationId, 'Invalid conversation id');
     const conversation = await this.conversationModel
       .findById(conversationId)
-      .populate('members.userId', '_id fullName email auth0Id')
+      .populate(
+        'members.userId',
+        '_id fullName email auth0Id personalInfo.profilePicture.filename personalInfo.profilePicture.url',
+      )
       .lean();
 
     if (!conversation) {
       throw new NotFoundException('Conversation not found');
     }
 
-    return conversation;
+    return this.attachMemberProfilePictureUrls(conversation);
   }
 
   async touchLastMessage(
@@ -314,6 +334,48 @@ export class ConversationsService {
     return this.findById(conversationId);
   }
 
+  async deleteConversation(actorUserId: string, conversationId: string) {
+    this.assertObjectId(conversationId, 'Invalid conversation id');
+    this.assertObjectId(actorUserId, 'Invalid user id');
+
+    const conversation = await this.conversationModel
+      .findById(conversationId)
+      .lean();
+
+    if (!conversation) {
+      throw new NotFoundException('Conversation not found');
+    }
+
+    const actorMember = conversation.members.find((member) =>
+      this.idsEqual(member.userId, actorUserId),
+    );
+
+    if (!actorMember) {
+      throw new ForbiddenException('You are not a member of this conversation');
+    }
+
+    if (
+      conversation.type === ConversationType.GROUP &&
+      actorMember.role !== ConversationMemberRole.OWNER &&
+      actorMember.role !== ConversationMemberRole.ADMIN
+    ) {
+      throw new ForbiddenException(
+        'Only owner/admin can delete group conversation',
+      );
+    }
+
+    await Promise.all([
+      this.messageModel.deleteMany({
+        conversationId: new Types.ObjectId(conversationId),
+      }),
+      this.conversationModel.deleteOne({
+        _id: new Types.ObjectId(conversationId),
+      }),
+    ]);
+
+    return { message: 'Conversation deleted successfully' };
+  }
+
   private async getConversationForMemberManagement(
     conversationId: string,
     actorUserId: string,
@@ -345,6 +407,43 @@ export class ConversationsService {
         'Only owner/admin can add or remove members',
       );
     }
+
+    return conversation;
+  }
+
+  private async attachMemberProfilePictureUrlsToList<T>(
+    conversations: T[],
+  ): Promise<T[]> {
+    return Promise.all(
+      conversations.map((conversation) =>
+        this.attachMemberProfilePictureUrls(conversation),
+      ),
+    );
+  }
+
+  private async attachMemberProfilePictureUrls<T>(conversation: T): Promise<T> {
+    const conversationObj = conversation as Record<string, any>;
+    const members = Array.isArray(conversationObj.members)
+      ? conversationObj.members
+      : [];
+
+    await Promise.all(
+      members.map(async (member: Record<string, any>) => {
+        const user = member?.userId as Record<string, any> | undefined;
+        const fileName = user?.personalInfo?.profilePicture?.filename as
+          | string
+          | undefined;
+
+        if (!fileName || !user) return;
+
+        try {
+          const url = await this.azureBlobStorageService.getFileUrl(fileName);
+          user.personalInfo.profilePicture.url = url;
+        } catch {
+          // Keep existing value (or undefined) if file URL cannot be resolved
+        }
+      }),
+    );
 
     return conversation;
   }
