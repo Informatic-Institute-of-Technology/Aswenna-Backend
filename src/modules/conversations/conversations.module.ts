@@ -9,6 +9,7 @@ import {
 } from './schemas/conversation.schema';
 import { AzureConfigModule } from '../../config/azure/azure.module';
 import { Message, MessageSchema } from '../messages/schemas/message.schema';
+import { ChatNotifierModule } from '../chat/chat-notifier.module';
 
 @Module({
   imports: [
@@ -18,6 +19,7 @@ import { Message, MessageSchema } from '../messages/schemas/message.schema';
       { name: Message.name, schema: MessageSchema },
     ]),
     AzureConfigModule,
+    ChatNotifierModule,
   ],
   controllers: [ConversationsController],
   providers: [ConversationsService],
