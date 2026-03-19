@@ -9,11 +9,11 @@ import {
   IsOptional,
   IsBoolean,
   ValidateNested,
-  ValidateIf,
   IsMongoId,
+  ValidateIf,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-import { ProjectType } from '../project.types';
+import { ProjectLandAvailability, ProjectType } from '../project.types';
 
 export class HarvestDetailsDto {
   @IsNotEmpty()
@@ -81,6 +81,10 @@ export class ProjectCreateDto {
   readonly offerType: ProjectType;
 
   @IsNotEmpty()
+  @IsEnum(ProjectLandAvailability)
+  readonly landAvailability: ProjectLandAvailability;
+
+  @IsNotEmpty()
   @IsString()
   readonly projectName: string;
 
@@ -113,14 +117,14 @@ export class ProjectCreateDto {
   @IsString({ each: true })
   readonly preferredRegions: string[];
 
+  @IsOptional()
   @IsArray()
-  @ArrayNotEmpty()
   @ValidateNested({ each: true })
   @Type(() => CostBreakdownItemDto)
   readonly costBreakdown: CostBreakdownItemDto[];
 
+  @IsOptional()
   @IsArray()
-  @ArrayNotEmpty()
   @ValidateNested({ each: true })
   @Type(() => MilestoneBreakdownItemDto)
   readonly milestoneBreakdown: MilestoneBreakdownItemDto[];

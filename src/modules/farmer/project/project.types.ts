@@ -3,6 +3,11 @@ export enum ProjectType {
   COMMISSION = 'commission',
 }
 
+export enum ProjectLandAvailability {
+  WITH_LAND = 'with_land',
+  WITHOUT_LAND = 'without_land',
+}
+
 export enum ProjectStatus {
   DRAFT = 'DRAFT',
   PUBLISHED = 'PUBLISHED',
@@ -39,6 +44,7 @@ export interface CommissionBasedDetailsI {
 export interface ProjectCreateI {
   readonly farmer: string;
   readonly offerType: ProjectType;
+  readonly landAvailability: ProjectLandAvailability;
   readonly projectName: string;
   readonly description: string;
   readonly cropType: string;
@@ -60,6 +66,7 @@ export interface ProjectCreateI {
 export interface ProjectUpdateI {
   readonly user?: string;
   readonly offerType?: ProjectType;
+  readonly landAvailability?: ProjectLandAvailability;
   readonly projectName?: string;
   readonly description?: string;
   readonly cropType?: string;
