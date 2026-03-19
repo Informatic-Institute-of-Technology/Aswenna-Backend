@@ -1,7 +1,10 @@
 import { UseGuards, UsePipes, ValidationPipe } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import {
   ConnectedSocket,
   MessageBody,
+  OnGatewayConnection,
+  OnGatewayInit,
   SubscribeMessage,
   WebSocketGateway,
   WebSocketServer,
@@ -9,6 +12,7 @@ import {
   WsResponse,
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
+import { ChatNotifierService } from './chat-notifier.service';
 import { ConversationsService } from '../conversations/conversations.service';
 import { MessagesService } from '../messages/messages.service';
 import {
@@ -31,14 +35,32 @@ interface ChatSocketData {
     whitelist: true,
   }),
 )
-export class ChatGateway {
+export class ChatGateway implements OnGatewayInit, OnGatewayConnection {
   @WebSocketServer()
   private readonly server: Server;
 
   constructor(
     private readonly conversationsService: ConversationsService,
     private readonly messagesService: MessagesService,
+    private readonly jwtService: JwtService,
+    private readonly chatNotifierService: ChatNotifierService,
   ) {}
+
+  afterInit(server: Server) {
+    this.chatNotifierService.setServer(server);
+  }
+
+  async handleConnection(client: Socket) {
+    const userId = await this.resolveUserIdFromHandshake(client);
+    if (!userId) {
+      client.disconnect();
+      return;
+    }
+
+    const data = client.data as ChatSocketData;
+    data.userId = userId;
+    await client.join(this.userRoom(userId));
+  }
 
   @SubscribeMessage('conversation:join')
   async joinConversation(
@@ -182,5 +204,36 @@ export class ChatGateway {
 
   private conversationRoom(conversationId: string) {
     return `conversation:${conversationId}`;
+  }
+
+  private userRoom(userId: string) {
+    return `user:${userId}`;
+  }
+
+  private async resolveUserIdFromHandshake(
+    client: Socket,
+  ): Promise<string | null> {
+    const authToken = client.handshake.auth?.token as unknown;
+    const headerToken = client.handshake.headers.authorization;
+
+    const tokenCandidate =
+      typeof authToken === 'string' && authToken.length > 0
+        ? authToken
+        : typeof headerToken === 'string'
+          ? headerToken
+          : null;
+
+    if (!tokenCandidate) return null;
+
+    const token = tokenCandidate.replace(/^Bearer\s+/i, '').trim();
+    if (!token) return null;
+
+    try {
+      const payload =
+        await this.jwtService.verifyAsync<Record<string, unknown>>(token);
+      return typeof payload.sub === 'string' ? payload.sub : null;
+    } catch {
+      return null;
+    }
   }
 }

@@ -10,6 +10,7 @@ import { PaginatedResponseType } from 'src/common/interfaces/response.types';
 import { AzureBlobStorageService } from 'src/config/azure/services/azure-blob-storage.service';
 import { User } from '../user/schemas/user.schema';
 import { Message } from '../messages/schemas/message.schema';
+import { ChatNotifierService } from '../chat/chat-notifier.service';
 import {
   AddConversationMemberDto,
   CreateGroupConversationDto,
@@ -32,6 +33,7 @@ export class ConversationsService {
     @InjectModel(Message.name)
     private readonly messageModel: Model<Message>,
     private readonly azureBlobStorageService: AzureBlobStorageService,
+    private readonly chatNotifierService: ChatNotifierService,
   ) {}
 
   async ensureMember(conversationId: string, userId: string) {
@@ -92,6 +94,11 @@ export class ConversationsService {
       ],
     });
 
+    this.chatNotifierService.emitConversationCreated(
+      [dto.peerUserId],
+      created._id.toString(),
+    );
+
     return this.findById(created._id.toString());
   }
 
@@ -126,6 +133,11 @@ export class ConversationsService {
         })),
       ],
     });
+
+    this.chatNotifierService.emitConversationCreated(
+      memberIds,
+      created._id.toString(),
+    );
 
     return this.findById(created._id.toString());
   }
@@ -372,6 +384,15 @@ export class ConversationsService {
         _id: new Types.ObjectId(conversationId),
       }),
     ]);
+
+    const otherMemberIds = conversation.members
+      .map((member) => String(member.userId))
+      .filter((memberId) => memberId !== actorUserId);
+
+    this.chatNotifierService.emitConversationDeleted(
+      otherMemberIds,
+      conversationId,
+    );
 
     return { message: 'Conversation deleted successfully' };
   }
