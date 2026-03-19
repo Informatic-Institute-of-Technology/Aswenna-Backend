@@ -85,4 +85,15 @@ export class ConversationsController {
       memberUserId,
     );
   }
+
+  @Delete(':id')
+  deleteConversation(
+    @UserReal() user: UserReal,
+    @Param('id') conversationId: string,
+  ) {
+    return this.conversationsService.deleteConversation(
+      user.user,
+      conversationId,
+    );
+  }
 }
