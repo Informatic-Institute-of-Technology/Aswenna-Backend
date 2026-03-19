@@ -117,15 +117,15 @@ export class ProjectService {
     const harvestBasedDetails = project.harvestBasedDetails;
     const commissionBasedDetails = project.commissionBasedDetails;
 
-    if (offerType === ProjectType.HARVEST && !harvestBasedDetails)
-      throw new BadRequestException(
-        'Harvest based details are required for harvest offer type projects',
-      );
+    // if (offerType === ProjectType.HARVEST && !harvestBasedDetails)
+    //   throw new BadRequestException(
+    //     'Harvest based details are required for harvest offer type projects',
+    //   );
 
-    if (offerType === ProjectType.COMMISSION && !commissionBasedDetails)
-      throw new BadRequestException(
-        'Commission based details are required for commission offer type projects',
-      );
+    // if (offerType === ProjectType.COMMISSION && !commissionBasedDetails)
+    //   throw new BadRequestException(
+    //     'Commission based details are required for commission offer type projects',
+    //   );
 
     const payload: Omit<ProjectCreateI, 'farmer'> & {
       farmer: Types.ObjectId;

@@ -17,7 +17,11 @@ import {
   CostBreakdownItemDto,
   MilestoneBreakdownItemDto,
 } from './project.create.dto';
-import { ProjectStatus, ProjectType } from '../project.types';
+import {
+  ProjectLandAvailability,
+  ProjectStatus,
+  ProjectType,
+} from '../project.types';
 
 export class ProjectUpdateDto {
   @IsOptional()
@@ -27,6 +31,10 @@ export class ProjectUpdateDto {
   @IsOptional()
   @IsEnum(ProjectType)
   readonly offerType: ProjectType;
+
+  @IsOptional()
+  @IsEnum(ProjectLandAvailability)
+  readonly landAvailability: ProjectLandAvailability;
 
   @IsOptional()
   @IsString()

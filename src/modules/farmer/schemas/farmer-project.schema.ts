@@ -8,6 +8,11 @@ export enum ProjectType {
   COMMISSION = 'commission',
 }
 
+export enum ProjectLandAvailability {
+  WITH_LAND = 'with_land',
+  WITHOUT_LAND = 'without_land',
+}
+
 export enum ProjectStatus {
   DRAFT = 'DRAFT',
   PUBLISHED = 'PUBLISHED',
@@ -74,6 +79,9 @@ export class FarmerProject extends Document {
 
   @Prop({ type: String, enum: ProjectType })
   readonly offerType: ProjectType;
+
+  @Prop({ type: String, enum: ProjectLandAvailability })
+  readonly landAvailability: ProjectLandAvailability;
 
   @Prop()
   readonly projectName: string;
