@@ -61,12 +61,6 @@ export class CommissionBasedDetails {
   readonly commissionPercentage: number;
 
   @Prop()
-  readonly investmentAmount: number;
-
-  @Prop()
-  readonly noOfInstallments: number;
-
-  @Prop()
   readonly expectedLandArea: number;
 }
 

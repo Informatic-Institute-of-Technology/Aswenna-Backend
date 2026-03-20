@@ -32,14 +32,6 @@ export class CommissionDetailsDto {
 
   @IsNotEmpty()
   @IsNumber()
-  readonly investmentAmount: number;
-
-  @IsNotEmpty()
-  @IsNumber()
-  readonly noOfInstallments: number;
-
-  @IsNotEmpty()
-  @IsNumber()
   readonly expectedLandArea: number;
 }
 

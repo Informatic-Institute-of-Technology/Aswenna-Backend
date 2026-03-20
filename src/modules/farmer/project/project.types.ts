@@ -36,8 +36,6 @@ export interface HarvestBasedDetailsI {
 
 export interface CommissionBasedDetailsI {
   readonly commissionPercentage: number;
-  readonly investmentAmount: number;
-  readonly noOfInstallments: number;
   readonly expectedLandArea: number;
 }
 
