@@ -30,7 +30,7 @@ export interface MilestoneBreakdownItemI {
 }
 
 export interface HarvestBasedDetailsI {
-  readonly expectedHarvest: number;
+  // readonly expectedHarvest: number;
   readonly expectedLandArea: number;
 }
 

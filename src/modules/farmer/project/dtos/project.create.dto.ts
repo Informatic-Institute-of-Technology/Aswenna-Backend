@@ -15,9 +15,9 @@ import { Type } from 'class-transformer';
 import { ProjectLandAvailability, ProjectType } from '../project.types';
 
 export class HarvestDetailsDto {
-  @IsNotEmpty()
-  @IsNumber()
-  readonly expectedHarvest: number;
+  // @IsNotEmpty()
+  // @IsNumber()
+  // readonly expectedHarvest: number;
 
   @IsNotEmpty()
   @IsNumber()
