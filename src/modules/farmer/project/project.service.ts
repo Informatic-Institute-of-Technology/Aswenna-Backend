@@ -36,6 +36,7 @@ export class ProjectService {
     search: string,
     sort: string,
     user: UserReal,
+    projectType?: ProjectType,
   ): Promise<PaginatedResponseType<FarmerProject[]>> {
     const userId = user.user || user.userId || user.sub;
     const sortOptions: Record<string, 'asc' | 'desc'> = {};
@@ -47,6 +48,10 @@ export class ProjectService {
       });
 
     const filter: FilterQuery<FarmerProject> = {};
+
+    if (projectType) {
+      Object.assign(filter, { offerType: projectType });
+    }
 
     if (userId) {
       const selectedUser = await this.userService.findById(userId);
@@ -65,17 +70,37 @@ export class ProjectService {
         { location: { $regex: search, $options: 'i' } },
       ];
 
+    const isCommissionType = projectType === ProjectType.COMMISSION;
+
+    const queryBuilder = this.projectModel
+      .find(filter)
+      .sort(sortOptions)
+      .skip((page - 1) * limit)
+      .limit(limit);
+
+    if (isCommissionType) {
+      queryBuilder.select({
+        _id: 0,
+        farmer: 1,
+        offerType: 1,
+        cropType: 1,
+        backgroundImage: 1,
+        location: 1,
+        landAvailability: 1,
+        effectiveDateTo: 1,
+        farmingMethods: 1,
+        preferredRegions: 1,
+        commissionBasedDetails: 1,
+      });
+    } else {
+      queryBuilder.populate({
+        path: 'farmer',
+        select: 'fullName email',
+      });
+    }
+
     const [data, totalDocs] = await Promise.all([
-      this.projectModel
-        .find(filter)
-        .sort(sortOptions)
-        .skip((page - 1) * limit)
-        .limit(limit)
-        .populate({
-          path: 'farmer',
-          select: 'fullName email',
-        })
-        .exec(),
+      queryBuilder.exec(),
       this.projectModel.countDocuments(filter).exec(),
     ]);
 

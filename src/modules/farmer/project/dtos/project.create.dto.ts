@@ -75,10 +75,12 @@ export class ProjectCreateDto {
   @IsEnum(ProjectLandAvailability)
   readonly landAvailability: ProjectLandAvailability;
 
+  @ValidateIf((o: ProjectCreateDto) => o.offerType === ProjectType.HARVEST)
   @IsNotEmpty()
   @IsString()
   readonly projectName: string;
 
+  @ValidateIf((o: ProjectCreateDto) => o.offerType === ProjectType.HARVEST)
   @IsNotEmpty()
   @IsString()
   readonly description: string;
@@ -87,10 +89,12 @@ export class ProjectCreateDto {
   @IsString()
   readonly cropType: string;
 
+  @ValidateIf((o: ProjectCreateDto) => o.offerType === ProjectType.HARVEST)
   @IsNotEmpty()
   @IsString()
   readonly cropIcon: string;
 
+  @ValidateIf((o: ProjectCreateDto) => o.offerType === ProjectType.HARVEST)
   @IsNotEmpty()
   @IsString()
   readonly backgroundImage: string;
@@ -107,22 +111,24 @@ export class ProjectCreateDto {
   @IsString({ each: true })
   readonly preferredRegions: string[];
 
-  @IsOptional()
+  @ValidateIf((o: ProjectCreateDto) => o.offerType === ProjectType.HARVEST)
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => CostBreakdownItemDto)
   readonly costBreakdown: CostBreakdownItemDto[];
 
-  @IsOptional()
+  @ValidateIf((o: ProjectCreateDto) => o.offerType === ProjectType.HARVEST)
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => MilestoneBreakdownItemDto)
   readonly milestoneBreakdown: MilestoneBreakdownItemDto[];
 
+  @ValidateIf((o: ProjectCreateDto) => o.offerType === ProjectType.HARVEST)
   @IsNotEmpty()
   @IsNumber()
   readonly totalInvestmentRequired: number;
 
+  @ValidateIf((o: ProjectCreateDto) => o.offerType === ProjectType.HARVEST)
   @IsNotEmpty()
   @IsDateString()
   readonly effectiveDateFrom: Date;
