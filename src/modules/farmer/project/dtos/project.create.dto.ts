@@ -1,6 +1,5 @@
 import {
   IsArray,
-  ArrayNotEmpty,
   IsNotEmpty,
   IsString,
   IsEnum,
@@ -105,7 +104,6 @@ export class ProjectCreateDto {
   readonly farmingMethods: string;
 
   @IsArray()
-  @ArrayNotEmpty()
   @IsString({ each: true })
   readonly preferredRegions: string[];
 
