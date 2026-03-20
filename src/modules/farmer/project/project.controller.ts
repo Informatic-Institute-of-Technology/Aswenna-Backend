@@ -31,6 +31,7 @@ export class ProjectController {
       query.search,
       query.sort,
       user,
+      query.projectType,
     );
   }
 
