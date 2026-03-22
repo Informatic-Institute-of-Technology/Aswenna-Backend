@@ -21,7 +21,7 @@ import { FarmerAdsModule } from './modules/farmer/farmer-ads.module';
 import { ConversationsModule } from './modules/conversations/conversations.module';
 import { MessagesModule } from './modules/messages/messages.module';
 import { ChatModule } from './modules/chat/chat.module';
-import { LandOwnerAdsModule } from './modules/land-owner/ads/land-owner-ads.module';
+import { LandOwnerAdsModule } from './modules/land-owner/land-ads/land-owner-ads.module';
 
 @Module({
   imports: [
