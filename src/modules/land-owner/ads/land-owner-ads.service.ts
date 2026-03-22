@@ -10,6 +10,7 @@ import {
   PaginatedResponseType,
   ResponseType,
 } from 'src/common/interfaces/response.types';
+import { AzureBlobStorageService } from 'src/config/azure/services/azure-blob-storage.service';
 import { UserReal } from 'src/core/decorators/user.decorators';
 import { UserService } from 'src/modules/user/user.service';
 import { CreateLandOwnerAdDto } from './dtos/land-owner-ad.create.dto';
@@ -19,6 +20,7 @@ import {
   LandOwnerAdCreatePayload,
   LandOwnerAdSortOptions,
   LandOwnerAdUpdatePayload,
+  UploadedLandImage,
 } from './land-owner-ads.types';
 import { LandOwnerAd, LandOwnerAdStatus } from './schemas/land-owner-ad.schema';
 
@@ -32,6 +34,8 @@ const T = {
   invalidDateRange: 'availableTo must be later than availableFrom',
   availableToInPast: 'availableTo must be in the future',
   invalidLandownerPayload: 'landowner in payload must match authenticated user',
+  noFileProvided: 'No image files provided',
+  imageNotFound: 'Image not found in this land ad',
 };
 
 @Injectable()
@@ -40,6 +44,7 @@ export class LandOwnerAdsService {
     @InjectModel(LandOwnerAd.name)
     private readonly landOwnerAdModel: Model<LandOwnerAd>,
     private readonly userService: UserService,
+    private readonly azureBlobStorageService: AzureBlobStorageService,
   ) {}
 
   @Cron('0 */15 * * * *')
@@ -87,7 +92,6 @@ export class LandOwnerAdsService {
       soilType: dto.soilType,
       landHistory: dto.landHistory,
       additionalInfo: dto.additionalInfo,
-      image: dto.image,
       status: LandOwnerAdStatus.ACTIVE,
     };
 
@@ -223,7 +227,6 @@ export class LandOwnerAdsService {
       soilType: dto.soilType,
       landHistory: dto.landHistory,
       additionalInfo: dto.additionalInfo,
-      image: dto.image,
     };
 
     if (dto.availableFrom) {
@@ -258,6 +261,123 @@ export class LandOwnerAdsService {
       statusCode: 200,
       message: 'Land owner ad deleted successfully',
     };
+  }
+
+  async uploadLandImages(
+    adId: string,
+    user: UserReal,
+    files: any[],
+  ): Promise<LandOwnerAd> {
+    const requester = await this.resolveRequester(user);
+    if (!requester.isLandOwner) {
+      throw new ForbiddenException(T.onlyLandOwnerAllowed);
+    }
+
+    if (!files?.length) {
+      throw new BadRequestException(T.noFileProvided);
+    }
+
+    const ad = await this.findByIdForOwner(adId, user);
+
+    const uploadedImages: UploadedLandImage[] = [];
+    for (const file of files) {
+      const uploadResult = await this.azureBlobStorageService.uploadFile(
+        file,
+        `land-owner-ads/${adId}`,
+      );
+
+      uploadedImages.push({
+        filename: uploadResult.fileName,
+        fileSize: String(uploadResult.size),
+        mimeType: uploadResult.contentType,
+        url: uploadResult.url,
+      });
+    }
+
+    const existingImages = (
+      (ad as unknown as { images?: UploadedLandImage[] }).images ?? []
+    ).slice();
+    const nextImages = [...existingImages, ...uploadedImages];
+
+    const updatePayload: {
+      images: UploadedLandImage[];
+      image?: UploadedLandImage;
+    } = {
+      images: nextImages,
+    };
+
+    const currentPrimary = (ad as unknown as { image?: UploadedLandImage })
+      .image;
+    if (!currentPrimary?.filename) {
+      updatePayload.image = uploadedImages[0];
+    }
+
+    const updated = await this.landOwnerAdModel
+      .findByIdAndUpdate(adId, updatePayload, { new: true })
+      .exec();
+
+    if (!updated) {
+      throw new BadRequestException(T.adNotFound(adId));
+    }
+
+    return updated;
+  }
+
+  async deleteLandImage(
+    adId: string,
+    user: UserReal,
+    filename: string,
+  ): Promise<LandOwnerAd> {
+    const requester = await this.resolveRequester(user);
+    if (!requester.isLandOwner) {
+      throw new ForbiddenException(T.onlyLandOwnerAllowed);
+    }
+
+    if (!filename) {
+      throw new BadRequestException(T.imageNotFound);
+    }
+
+    const ad = await this.findByIdForOwner(adId, user);
+    const existingImages = (
+      (ad as unknown as { images?: UploadedLandImage[] }).images ?? []
+    ).slice();
+    const primaryImage = (ad as unknown as { image?: UploadedLandImage }).image;
+
+    const inGallery = existingImages.some(
+      (image) => image.filename === filename,
+    );
+    const isPrimary = primaryImage?.filename === filename;
+
+    if (!inGallery && !isPrimary) {
+      throw new BadRequestException(T.imageNotFound);
+    }
+
+    await this.azureBlobStorageService.deleteFile(filename);
+
+    const nextImages = existingImages.filter(
+      (image) => image.filename !== filename,
+    );
+
+    const updatePayload: {
+      images: UploadedLandImage[];
+      image?: UploadedLandImage;
+    } = {
+      images: nextImages,
+    };
+
+    if (isPrimary) {
+      updatePayload.image = nextImages[0];
+    }
+
+    const updated = await this.landOwnerAdModel
+      .findByIdAndUpdate(adId, updatePayload, { new: true })
+      .exec();
+
+    if (!updated) {
+      throw new BadRequestException(T.adNotFound(adId));
+    }
+
+    return updated;
   }
 
   private async resolveRequester(
