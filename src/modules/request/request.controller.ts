@@ -1,94 +1,93 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+} from '@nestjs/common';
 import { RequestService } from './request.service';
 import { UserReal } from 'src/core/decorators/user.decorators';
 import { RequestCreateDto } from './dtos/request.create.dto';
 import { Auth } from 'src/core/decorators/auth.decorator';
+import { RequestQueryDto } from './dtos/request.query.dto';
+import {
+  AddJourneyStepDto,
+  OverwriteJourneyStepsDto,
+  RequestUpdateDto,
+  UpdateJourneyStepDto,
+} from './dtos/request.update.dto';
 
 @Controller({ path: 'request', version: '1' })
 @Auth()
 export class RequestController {
-  constructor(private requestService: RequestService) {}
+  constructor(private readonly requestService: RequestService) {}
 
-  @Post()
-  async createRequest(
-    @UserReal() user: UserReal,
-    @Body() dto: RequestCreateDto,
-  ) {
-    return this.requestService.createRequest(user.user, dto);
+  @Get()
+  getAllRequests(@UserReal() user: UserReal, @Query() query: RequestQueryDto) {
+    return this.requestService.findAllForUser(user.user, query);
   }
 
-  // /**
-  //  * Get requests received by the user
-  //  * GET /requests/inbox
-  //  */
-  // @Get('inbox')
-  // async getInboxRequests(
-  //   @UserReal() user: UserReal,
-  //   @Query() query: RequestQueryDto,
-  // ) {
-  //   const page = query.page ? parseInt(query.page.toString()) : 1;
-  //   const limit = query.limit ? parseInt(query.limit.toString()) : 10;
+  @Get(':id')
+  getRequestById(@UserReal() user: UserReal, @Param('id') id: string) {
+    return this.requestService.findByIdForUser(id, user.user);
+  }
 
-  //   return this.requestService.getReceiverRequests(
-  //     user.user,
-  //     query.status,
-  //     page,
-  //     limit,
-  //   );
-  // }
+  @Post()
+  createRequest(@Body() dto: RequestCreateDto) {
+    return this.requestService.createRequest(dto);
+  }
 
-  // /**
-  //  * Get requests sent by the user
-  //  * GET /requests/sent
-  //  */
-  // @Get('sent')
-  // async getSentRequests(
-  //   @UserReal() user: UserReal,
-  //   @Query() query: RequestQueryDto,
-  // ) {
-  //   const page = query.page ? parseInt(query.page.toString()) : 1;
-  //   const limit = query.limit ? parseInt(query.limit.toString()) : 10;
+  @Patch(':id')
+  updateRequest(
+    @UserReal() user: UserReal,
+    @Param('id') id: string,
+    @Body() dto: RequestUpdateDto,
+  ) {
+    return this.requestService.updateForUser(id, user.user, dto);
+  }
 
-  //   return this.requestService.getSenderRequests(
-  //     user.user,
-  //     query.status,
-  //     page,
-  //     limit,
-  //   );
-  // }
+  @Delete(':id')
+  deleteRequest(@UserReal() user: UserReal, @Param('id') id: string) {
+    return this.requestService.deleteForUser(id, user.user);
+  }
 
-  // /**
-  //  * Get a specific request by ID
-  //  * GET /requests/:requestId
-  //  */
-  // @Get(':requestId')
-  // async getRequestById(@Param('requestId') requestId: string) {
-  //   return this.requestService.getRequestById(requestId);
-  // }
+  @Post(':id/journey-steps')
+  addJourneyStep(
+    @UserReal() user: UserReal,
+    @Param('id') id: string,
+    @Body() dto: AddJourneyStepDto,
+  ) {
+    return this.requestService.addJourneyStep(id, user.user, dto);
+  }
 
-  // /**
-  //  * Approve or reject a request
-  //  * PATCH /requests/:requestId/respond
-  //  */
-  // @Patch(':requestId/respond')
-  // async respondToRequest(
-  //   @UserReal() user: UserReal,
-  //   @Param('requestId') requestId: string,
-  //   @Body() dto: UpdateRequestStatusDto,
-  // ) {
-  //   return this.requestService.updateRequestStatus(requestId, user.user, dto);
-  // }
+  @Patch(':id/journey-steps/:stepId')
+  updateJourneyStep(
+    @UserReal() user: UserReal,
+    @Param('id') id: string,
+    @Param('stepId') stepId: string,
+    @Body() dto: UpdateJourneyStepDto,
+  ) {
+    return this.requestService.updateJourneyStep(id, stepId, user.user, dto);
+  }
 
-  // /**
-  //  * Cancel a request (sender only)
-  //  * DELETE /requests/:requestId
-  //  */
-  // @Delete(':requestId')
-  // @HttpCode(200)
-  // async cancelRequest(
-  //   @UserReal() user: UserReal,
-  //   @Param('requestId') requestId: string,
-  // ) {
-  //   return this.requestService.cancelRequest(requestId, user.user);
-  // }
+  @Delete(':id/journey-steps/:stepId')
+  removeJourneyStep(
+    @UserReal() user: UserReal,
+    @Param('id') id: string,
+    @Param('stepId') stepId: string,
+  ) {
+    return this.requestService.removeJourneyStep(id, stepId, user.user);
+  }
+
+  @Patch(':id/journey-steps')
+  overwriteJourneySteps(
+    @UserReal() user: UserReal,
+    @Param('id') id: string,
+    @Body() dto: OverwriteJourneyStepsDto,
+  ) {
+    return this.requestService.overwriteJourneySteps(id, user.user, dto);
+  }
 }
