@@ -44,7 +44,10 @@ export class LandOwnerAd extends Document {
   readonly additionalInfo: string;
 
   @Prop(File)
-  readonly image: File;
+  readonly image?: File;
+
+  @Prop([File])
+  readonly images: File[];
 
   @Prop({
     type: String,
