@@ -22,8 +22,6 @@ import {
 
 @Injectable()
 export class AzureBlobStorageService {
-  private readonly logger = new Logger(AzureBlobStorageService.name);
-
   constructor(private azureStorageService: AzureStorageService) {}
 
   async uploadFile(
@@ -39,10 +37,6 @@ export class AzureBlobStorageService {
       const fileName = this.createBlobFileName(file.originalname, folderPath);
       const blockBlobClient = this.getBlockBlobClient(fileName);
 
-      this.logger.log(
-        `Uploading file: ${fileName} to container: ${containerName}`,
-      );
-
       // Upload the file
       await blockBlobClient.uploadData(file.buffer, {
         blobHTTPHeaders: {
@@ -53,8 +47,6 @@ export class AzureBlobStorageService {
       // Get the blob properties
       const properties = await blockBlobClient.getProperties();
 
-      this.logger.log(`File uploaded successfully: ${fileName}`);
-
       return {
         fileName: fileName,
         url: blockBlobClient.url,
@@ -63,7 +55,7 @@ export class AzureBlobStorageService {
         uploadedAt: new Date(properties.createdOn || Date.now()),
       };
     } catch (error) {
-      this.logger.error(
+      console.error(
         `Error uploading file: ${error instanceof Error ? error.message : 'Unknown error'}`,
         error,
       );
@@ -91,10 +83,6 @@ export class AzureBlobStorageService {
       const containerName = this.azureStorageService.getContainerName();
       const blockBlobClient = this.getBlockBlobClient(fileName);
 
-      this.logger.log(
-        `Deleting file: ${fileName} from container: ${containerName}`,
-      );
-
       // Check if blob exists before deleting
       const exists = await blockBlobClient.exists();
       if (!exists) {
@@ -103,15 +91,13 @@ export class AzureBlobStorageService {
 
       await blockBlobClient.delete();
 
-      this.logger.log(`File deleted successfully: ${fileName}`);
-
       return {
         success: true,
         message: `File ${fileName} deleted successfully`,
         fileName: fileName,
       };
     } catch (error) {
-      this.logger.error(
+      console.error(
         `Error deleting file: ${error instanceof Error ? error.message : 'Unknown error'}`,
         error,
       );
@@ -135,10 +121,6 @@ export class AzureBlobStorageService {
 
       const containerName = this.azureStorageService.getContainerName();
       const blockBlobClient = this.getBlockBlobClient(fileName);
-
-      this.logger.log(
-        `Generating pre-signed URL for: ${fileName} with expiration: ${expiresInMinutes} minutes`,
-      );
 
       // Check if blob exists
       const exists = await blockBlobClient.exists();
@@ -166,15 +148,13 @@ export class AzureBlobStorageService {
 
       const sasUrl = `${blockBlobClient.url}?${sasQueryParameters}`;
 
-      this.logger.log(`Pre-signed URL generated successfully for: ${fileName}`);
-
       return {
         url: sasUrl,
         expiresIn: expiresInMinutes,
         fileName: fileName,
       };
     } catch (error) {
-      this.logger.error(
+      console.error(
         `Error generating pre-signed URL: ${error instanceof Error ? error.message : 'Unknown error'}`,
         error,
       );
@@ -222,10 +202,6 @@ export class AzureBlobStorageService {
         this.azureStorageService.getSharedKeyCredential(),
       );
 
-      this.logger.log(
-        `Generated upload URL for: ${fileName} with expiration: ${expiresInMinutes} minutes`,
-      );
-
       return {
         fileName,
         url: `${blockBlobClient.url}?${sasQueryParameters}`,
@@ -237,7 +213,7 @@ export class AzureBlobStorageService {
         },
       };
     } catch (error) {
-      this.logger.error(
+      console.error(
         `Error generating upload URL: ${error instanceof Error ? error.message : 'Unknown error'}`,
         error,
       );
@@ -278,7 +254,7 @@ export class AzureBlobStorageService {
         ),
       };
     } catch (error) {
-      this.logger.error(
+      console.error(
         `Error getting file details: ${error instanceof Error ? error.message : 'Unknown error'}`,
         error,
       );
@@ -299,19 +275,15 @@ export class AzureBlobStorageService {
 
       const blockBlobClient = this.getBlockBlobClient(fileName);
 
-      this.logger.log(`Retrieving URL for file: ${fileName}`);
-
       // Check if blob exists
       const exists = await blockBlobClient.exists();
       if (!exists) {
         throw new BadRequestException(`File not found: ${fileName}`);
       }
 
-      this.logger.log(`URL retrieved successfully for: ${fileName}`);
-
       return blockBlobClient.url;
     } catch (error) {
-      this.logger.error(
+      console.error(
         `Error getting file URL: ${error instanceof Error ? error.message : 'Unknown error'}`,
         error,
       );

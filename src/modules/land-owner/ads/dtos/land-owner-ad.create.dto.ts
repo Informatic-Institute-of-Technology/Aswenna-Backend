@@ -37,12 +37,13 @@ export class CreateLandOwnerAdDto {
   readonly title: string;
 
   @IsString()
-  @IsNotEmpty()
-  readonly location: string;
+  @IsOptional()
+  readonly location?: string;
 
   @Type(() => Number)
   @IsNumber()
-  readonly landArea: number;
+  @IsOptional()
+  readonly landArea?: number;
 
   @Type(() => Number)
   @IsNumber()
@@ -66,7 +67,11 @@ export class CreateLandOwnerAdDto {
   @IsNotEmpty()
   readonly additionalInfo: string;
 
+  @IsString()
+  @IsNotEmpty()
+  readonly waterAvailability: string;
+
   @ValidateNested()
   @Type(() => LandOwnerAdFileDto)
-  readonly image: LandOwnerAdFileDto;
+  readonly images: LandOwnerAdFileDto[];
 }

@@ -1,11 +1,10 @@
 import { Types } from 'mongoose';
-import { CreateLandOwnerAdDto } from './dtos/land-owner-ad.create.dto';
 import { LandOwnerAdStatus } from './schemas/land-owner-ad.schema';
 
 export interface LandOwnerAdCreatePayload {
   landowner: Types.ObjectId;
   title: string;
-  location: string;
+  location: { latitude: number; longitude: number };
   landArea: number;
   rentalAmount: number;
   availableFrom: Date;
@@ -13,13 +12,14 @@ export interface LandOwnerAdCreatePayload {
   soilType: string;
   landHistory?: string;
   additionalInfo: string;
-  image: CreateLandOwnerAdDto['image'];
+  waterAvailability: string;
+  images?: UploadedLandImage[];
   status: LandOwnerAdStatus;
 }
 
 export interface LandOwnerAdUpdatePayload {
   title?: string;
-  location?: string;
+  location?: { latitude: number; longitude: number };
   landArea?: number;
   rentalAmount?: number;
   availableFrom?: Date;
@@ -27,7 +27,8 @@ export interface LandOwnerAdUpdatePayload {
   soilType?: string;
   landHistory?: string;
   additionalInfo?: string;
-  image?: CreateLandOwnerAdDto['image'];
+  waterAvailability?: string;
+  images?: UploadedLandImage[];
 }
 
 export interface UserRoleReference {
@@ -35,3 +36,10 @@ export interface UserRoleReference {
 }
 
 export type LandOwnerAdSortOptions = Record<string, 1 | -1>;
+
+export interface UploadedLandImage {
+  filename: string;
+  fileSize: string;
+  mimeType: string;
+  url?: string;
+}

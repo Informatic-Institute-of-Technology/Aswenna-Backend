@@ -22,6 +22,8 @@ import { ConversationsModule } from './modules/conversations/conversations.modul
 import { MessagesModule } from './modules/messages/messages.module';
 import { ChatModule } from './modules/chat/chat.module';
 import { LandOwnerAdsModule } from './modules/land-owner/ads/land-owner-ads.module';
+import { ContractsModule } from './modules/contracts/contracts.module';
+import { PaymentsModule } from './modules/payments/payments.module';
 
 @Module({
   imports: [
@@ -48,6 +50,8 @@ import { LandOwnerAdsModule } from './modules/land-owner/ads/land-owner-ads.modu
     MessagesModule,
     ChatModule,
     LandOwnerAdsModule,
+    ContractsModule,
+    PaymentsModule,
   ],
 })
 export class AppModule {}

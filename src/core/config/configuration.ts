@@ -33,4 +33,14 @@ export default () => ({
       ? parseInt(process.env.AZURE_UPLOAD_SAS_EXPIRATION_MINUTES, 10)
       : 15,
   },
+  payhere: {
+    merchantId: process.env.PAYHERE_MERCHANT_ID || '',
+    merchantSecret: process.env.PAYHERE_MERCHANT_SECRET || '',
+    currency: process.env.PAYHERE_CURRENCY || 'LKR',
+    sandbox: (process.env.PAYHERE_SANDBOX || 'true').toLowerCase() === 'true',
+    checkoutUrl: process.env.PAYHERE_CHECKOUT_URL || '',
+    notifyUrl: process.env.PAYHERE_NOTIFY_URL || '',
+    returnUrl: process.env.PAYHERE_RETURN_URL || '',
+    cancelUrl: process.env.PAYHERE_CANCEL_URL || '',
+  },
 });

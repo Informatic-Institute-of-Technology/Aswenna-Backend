@@ -7,7 +7,6 @@ import {
 } from 'class-validator';
 import { Type } from 'class-transformer';
 
-
 export class HarvestDetailsDto {
   @IsNumber()
   expectedHarvest: number;
@@ -27,7 +26,6 @@ export class CommissionDetailsDto {
   noOfInstallments: number;
 }
 
-
 export class CostBreakdownItemDto {
   @IsString()
   category: string;
@@ -38,8 +36,6 @@ export class CostBreakdownItemDto {
   @IsNumber()
   estimatedCost: number;
 }
-
-
 
 export class CreateFarmerAdDto {
   @IsString()
@@ -73,7 +69,6 @@ export class CreateFarmerAdDto {
   @IsArray()
   preferredRegions: string[];
 
- 
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => CostBreakdownItemDto)
