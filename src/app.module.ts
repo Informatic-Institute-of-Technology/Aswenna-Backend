@@ -6,7 +6,7 @@ import { AzureConfigModule } from './config/azure/azure.module';
 import { HealthModule } from './core/health/health.module';
 import { UserModule } from './modules/user/user.module';
 import { AuthModule } from './modules/auth/auth.module';
-import { PermissionModule } from './modules/permission/permission.module';
+import { PermissionModule } from './modules/permissions/permission.module';
 import { InvestorModule } from './modules/investor/investor.module';
 import { FarmerModule } from './modules/farmer/farmer.module';
 import { LandOwnerModule } from './modules/land-owner/land-owner.module';
