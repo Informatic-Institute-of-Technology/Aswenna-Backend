@@ -29,4 +29,14 @@ export const validationSchema = Joi.object({
   AZURE_STORAGE_ACCOUNT_KEY: Joi.string().required(),
   AZURE_STORAGE_CONTAINER_NAME: Joi.string().default('files'),
   AZURE_UPLOAD_SAS_EXPIRATION_MINUTES: Joi.number().default(15),
+
+  // PayHere
+  PAYHERE_MERCHANT_ID: Joi.string().allow('').default(''),
+  PAYHERE_MERCHANT_SECRET: Joi.string().allow('').default(''),
+  PAYHERE_CURRENCY: Joi.string().default('LKR'),
+  PAYHERE_SANDBOX: Joi.boolean().truthy('true').falsy('false').default(true),
+  PAYHERE_CHECKOUT_URL: Joi.string().allow('').default(''),
+  PAYHERE_NOTIFY_URL: Joi.string().allow('').default(''),
+  PAYHERE_RETURN_URL: Joi.string().allow('').default(''),
+  PAYHERE_CANCEL_URL: Joi.string().allow('').default(''),
 });
