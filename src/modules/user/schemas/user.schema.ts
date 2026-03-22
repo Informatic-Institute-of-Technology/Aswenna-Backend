@@ -2,7 +2,7 @@ import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
 import { File } from 'src/common/schemas/file.schema';
 import { Meta } from 'src/common/schemas/meta.schema';
-import { Permission } from 'src/modules/permission/schemas/permission.schema';
+import { Permission } from 'src/modules/permissions/schemas/permission.schema';
 import { Role } from 'src/modules/role/schemas/role.schema';
 
 export enum UserStatus {

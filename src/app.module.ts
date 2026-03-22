@@ -6,7 +6,7 @@ import { AzureConfigModule } from './config/azure/azure.module';
 import { HealthModule } from './core/health/health.module';
 import { UserModule } from './modules/user/user.module';
 import { AuthModule } from './modules/auth/auth.module';
-import { PermissionModule } from './modules/permission/permission.module';
+import { PermissionModule } from './modules/permissions/permission.module';
 import { InvestorModule } from './modules/investor/investor.module';
 import { FarmerModule } from './modules/farmer/farmer.module';
 import { LandOwnerModule } from './modules/land-owner/land-owner.module';
@@ -21,7 +21,7 @@ import { FarmerAdsModule } from './modules/farmer/farmer-ads.module';
 import { ConversationsModule } from './modules/conversations/conversations.module';
 import { MessagesModule } from './modules/messages/messages.module';
 import { ChatModule } from './modules/chat/chat.module';
-import { LandOwnerAdsModule } from './modules/land-owner/ads/land-owner-ads.module';
+import { LandOwnerAdsModule } from './modules/land-owner/land-ads/land-owner-ads.module';
 
 @Module({
   imports: [

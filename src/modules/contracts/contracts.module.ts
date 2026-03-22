@@ -7,7 +7,7 @@ import { OfferModule } from '../investor/offer/offer.module';
 import {
   LandOwnerAd,
   LandOwnerAdSchema,
-} from '../land-owner/ads/schemas/land-owner-ad.schema';
+} from '../land-owner/land-ads/schemas/land-owner-ad.schema';
 import { PaymentsModule } from '../payments/payments.module';
 
 @Module({
