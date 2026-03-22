@@ -1,5 +1,18 @@
-import { IsEnum, IsMongoId, IsOptional, IsString, IsNumber, IsArray, IsObject, ValidateNested, Type } from 'class-validator';
-import { ContractCreateI, MilestoneI, LandRentalI, FinancialBreakdownI } from '../contracts.types';
+import {
+  IsEnum,
+  IsMongoId,
+  IsOptional,
+  IsString,
+  IsNumber,
+  IsArray,
+  ValidateNested,
+} from 'class-validator';
+import {
+  ContractCreateI,
+  MilestoneI,
+  LandRentalI,
+  FinancialBreakdownI,
+} from '../contracts.types';
 
 export class CreateContractDto implements ContractCreateI {
   @IsEnum(['investor-harvest-base', 'land-owner-ad', 'investor-sponsorship'])
@@ -93,18 +106,15 @@ export class CreateContractDto implements ContractCreateI {
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
-  @Type(() => Object)
   milestones?: MilestoneI[];
 
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
-  @Type(() => Object)
   landRentals?: LandRentalI[];
 
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
-  @Type(() => Object)
   financialBreakdown?: FinancialBreakdownI[];
 }

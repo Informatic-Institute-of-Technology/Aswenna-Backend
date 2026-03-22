@@ -1,10 +1,18 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
-import { MilestoneI, LandRentalI, FinancialBreakdownI } from '../contracts.types';
+import {
+  MilestoneI,
+  LandRentalI,
+  FinancialBreakdownI,
+} from '../contracts.types';
 
 @Schema({ timestamps: true })
 export class Contract extends Document {
-  @Prop({ type: String, enum: ['investor-harvest-base', 'land-owner-ad', 'investor-sponsorship'], required: true })
+  @Prop({
+    type: String,
+    enum: ['investor-harvest-base', 'land-owner-ad', 'investor-sponsorship'],
+    required: true,
+  })
   type: string;
 
   @Prop({ type: Types.ObjectId, ref: 'Offer', required: true })
@@ -46,7 +54,11 @@ export class Contract extends Document {
   @Prop({ type: Number })
   expectedROI?: number;
 
-  @Prop({ type: String, enum: ['active', 'inactive', 'completed', 'terminated'], default: 'active' })
+  @Prop({
+    type: String,
+    enum: ['active', 'inactive', 'completed', 'terminated'],
+    default: 'active',
+  })
   status: string;
 
   @Prop({ type: String, enum: ['harvest', 'commission'] })
