@@ -19,8 +19,15 @@ export class LandOwnerAd extends Document {
   @Prop({ required: true })
   readonly title: string;
 
-  @Prop({ required: true })
-  readonly location: string;
+  @Prop({
+    type: {
+      latitude: { type: Number, required: true },
+      longitude: { type: Number, required: true },
+    },
+    required: true,
+    _id: false,
+  })
+  readonly location: { latitude: number; longitude: number };
 
   @Prop({ required: true })
   readonly landArea: number;
@@ -43,8 +50,8 @@ export class LandOwnerAd extends Document {
   @Prop({ required: true })
   readonly additionalInfo: string;
 
-  @Prop(File)
-  readonly image?: File;
+  @Prop({ required: true })
+  readonly waterAvailability: string;
 
   @Prop([File])
   readonly images: File[];
