@@ -23,6 +23,7 @@ import {
   UploadedLandImage,
 } from './land-owner-ads.types';
 import { LandOwnerAd, LandOwnerAdStatus } from './schemas/land-owner-ad.schema';
+import { File } from 'src/common/schemas/file.schema';
 
 const T = {
   unauthorizedUser: 'Unauthorized user',
@@ -52,56 +53,10 @@ export class LandOwnerAdsService {
     await this.expireAdsByDate();
   }
 
-  async create(
-    user: UserReal,
-    dto: CreateLandOwnerAdDto,
-  ): Promise<LandOwnerAd> {
-    const requester = await this.resolveRequester(user);
-    if (!requester.isLandOwner) {
-      throw new ForbiddenException(T.onlyLandOwnerAllowed);
-    }
-
-    const userId = requester.userId;
-
-    if (dto.landowner && dto.landowner !== userId) {
-      throw new BadRequestException(T.invalidLandownerPayload);
-    }
-
-    this.validateDateRange(dto.availableFrom, dto.availableTo);
-    await this.expireAdsByDate();
-
-    const existingActiveAd = await this.landOwnerAdModel
-      .findOne({
-        landowner: new Types.ObjectId(userId),
-        status: LandOwnerAdStatus.ACTIVE,
-      })
-      .exec();
-
-    if (existingActiveAd) {
-      throw new BadRequestException(T.oneActiveAdOnly);
-    }
-
-    const payload: LandOwnerAdCreatePayload = {
-      landowner: new Types.ObjectId(userId),
-      title: dto.title,
-      location: dto.location,
-      landArea: dto.landArea,
-      rentalAmount: dto.rentalAmount,
-      availableFrom: new Date(dto.availableFrom),
-      availableTo: new Date(dto.availableTo),
-      soilType: dto.soilType,
-      landHistory: dto.landHistory,
-      additionalInfo: dto.additionalInfo,
-      status: LandOwnerAdStatus.ACTIVE,
-    };
-
-    return this.landOwnerAdModel.create(payload);
-  }
-
   async findAllByOwner(
     user: UserReal,
     query: LandOwnerAdQueryDto,
-  ): Promise<PaginatedResponseType<LandOwnerAd[]>> {
+  ): Promise<PaginatedResponseType<any[]>> {
     const requester = await this.resolveRequester(user);
     await this.expireAdsByDate();
 
@@ -140,14 +95,44 @@ export class LandOwnerAdsService {
             select: 'fullName email',
           },
         ])
+        .lean()
         .exec(),
       this.landOwnerAdModel.countDocuments(filter).exec(),
     ]);
 
+    // Enrich data with full user details including profilePicture and landImages
+    const enrichedData = await Promise.all(
+      data.map(async (ad) => {
+        const landownerIdStr =
+          ad.landowner instanceof Types.ObjectId
+            ? ad.landowner.toString()
+            : (ad.landowner as { _id?: any })?._id?.toString() ||
+              String(ad.landowner);
+
+        const fullLandownerDetails =
+          await this.userService.findById(landownerIdStr);
+
+        const landownerPayload: Record<string, any> = {
+          ...ad.landowner,
+        };
+
+        if (fullLandownerDetails.personalInfo?.profilePicture) {
+          landownerPayload.personalInfo = {
+            profilePicture: fullLandownerDetails.personalInfo.profilePicture,
+          };
+        }
+
+        return this.enrichAdWithImageUrls({
+          ...ad,
+          landowner: landownerPayload,
+        });
+      }),
+    );
+
     const totalPages = Math.ceil(totalDocs / query.limit);
 
     return {
-      data,
+      data: enrichedData,
       pagination: {
         hasNextPage: query.page < totalPages,
         hasPrevPage: query.page > 1,
@@ -161,7 +146,10 @@ export class LandOwnerAdsService {
     };
   }
 
-  async findByIdForOwner(adId: string, user: UserReal): Promise<LandOwnerAd> {
+  async findByIdForOwner(
+    adId: string,
+    user: UserReal,
+  ): Promise<Record<string, any>> {
     const requester = await this.resolveRequester(user);
     await this.expireAdsByDate();
 
@@ -173,7 +161,7 @@ export class LandOwnerAdsService {
           select: 'fullName email',
         },
       ])
-      .exec();
+      .lean();
     if (!ad) {
       throw new BadRequestException(T.adNotFound(adId));
     }
@@ -185,7 +173,105 @@ export class LandOwnerAdsService {
       }
     }
 
-    return ad;
+    // Fetch full user details to include profilePicture and landImages
+    const landownerIdStr =
+      ad.landowner instanceof Types.ObjectId
+        ? ad.landowner.toString()
+        : (ad.landowner as { _id?: any })?._id?.toString() ||
+          String(ad.landowner);
+
+    const fullLandownerDetails =
+      await this.userService.findById(landownerIdStr);
+    const userWithLandOwner = fullLandownerDetails as any;
+
+    const landownerPayload: Record<string, any> = {
+      ...ad.landowner,
+    };
+
+    // Include profilePicture from user details
+    if (fullLandownerDetails.personalInfo?.profilePicture) {
+      landownerPayload.personalInfo = {
+        profilePicture: fullLandownerDetails.personalInfo.profilePicture,
+      };
+    }
+
+    return this.enrichAdWithImageUrls({
+      ...ad,
+      landowner: landownerPayload,
+    });
+  }
+
+  async create(
+    user: UserReal,
+    dto: CreateLandOwnerAdDto,
+  ): Promise<LandOwnerAd> {
+    const requester = await this.resolveRequester(user);
+    if (!requester.isLandOwner) {
+      throw new ForbiddenException(T.onlyLandOwnerAllowed);
+    }
+
+    const userId = requester.userId;
+
+    if (dto.landowner && dto.landowner !== userId) {
+      throw new BadRequestException(T.invalidLandownerPayload);
+    }
+
+    this.validateDateRange(dto.availableFrom, dto.availableTo);
+    await this.expireAdsByDate();
+
+    const fullUserDetails = await this.userService.findById(userId);
+    const userWithLandOwner = fullUserDetails as any;
+    const landImagesFromLandOwner =
+      userWithLandOwner?.landOwner?.landAddress?.landImages || [];
+    const locationFromUser: { latitude: number; longitude: number } =
+      userWithLandOwner?.landOwner?.location || {
+        latitude: 0,
+        longitude: 0,
+      };
+    const landAreaFromUser: number = parseFloat(
+      userWithLandOwner?.landOwner?.landAddress?.size || '0',
+    );
+
+    const mappedLandImages: UploadedLandImage[] = landImagesFromLandOwner.map(
+      (img: File) => ({
+        filename: img.filename,
+        fileSize: img.fileSize,
+        mimeType: img.mimeType,
+      }),
+    );
+
+    const existingActiveAd = await this.landOwnerAdModel
+      .findOne({
+        landowner: new Types.ObjectId(userId),
+        status: LandOwnerAdStatus.ACTIVE,
+      })
+      .exec();
+
+    if (existingActiveAd) {
+      throw new BadRequestException(T.oneActiveAdOnly);
+    }
+
+    // Combine provided images with landOwner images
+    const combinedImages = [...(dto?.images || []), ...mappedLandImages];
+
+    const payload: LandOwnerAdCreatePayload = {
+      landowner: new Types.ObjectId(userId),
+      title: dto.title,
+      location: locationFromUser,
+      landArea: landAreaFromUser,
+      rentalAmount: dto.rentalAmount,
+      availableFrom: new Date(dto.availableFrom),
+      availableTo: new Date(dto.availableTo),
+      soilType: dto.soilType,
+      landHistory: dto.landHistory,
+      additionalInfo: dto.additionalInfo,
+      waterAvailability: dto.waterAvailability,
+      images: combinedImages.length > 0 ? combinedImages : undefined,
+      status: LandOwnerAdStatus.ACTIVE,
+    };
+
+    const created = await this.landOwnerAdModel.create(payload);
+    return this.enrichAdWithImageUrls(created);
   }
 
   async updateForOwner(
@@ -219,14 +305,28 @@ export class LandOwnerAdsService {
       );
     }
 
+    // Fetch location and landArea from User document's landOwner field
+    const fullUserDetails = await this.userService.findById(requester.userId);
+    const userWithLandOwner = fullUserDetails as any;
+    const locationFromUser: { latitude: number; longitude: number } =
+      userWithLandOwner?.landOwner?.location || {
+        latitude: 0,
+        longitude: 0,
+      };
+    const landAreaFromUser: number = parseFloat(
+      userWithLandOwner?.landOwner?.landAddress?.size || '0',
+    );
+
     const payload: LandOwnerAdUpdatePayload = {
       title: dto.title,
-      location: dto.location,
-      landArea: dto.landArea,
+      location: locationFromUser,
+      landArea: landAreaFromUser,
       rentalAmount: dto.rentalAmount,
       soilType: dto.soilType,
       landHistory: dto.landHistory,
       additionalInfo: dto.additionalInfo,
+      waterAvailability: dto.waterAvailability,
+      images: dto.images,
     };
 
     if (dto.availableFrom) {
@@ -244,7 +344,7 @@ export class LandOwnerAdsService {
       throw new BadRequestException(T.adNotFound(adId));
     }
 
-    return updated;
+    return this.enrichAdWithImageUrls(updated);
   }
 
   async deleteForOwner(adId: string, user: UserReal): Promise<ResponseType> {
@@ -253,7 +353,16 @@ export class LandOwnerAdsService {
       throw new ForbiddenException(T.onlyLandOwnerAllowed);
     }
 
-    await this.findByIdForOwner(adId, user);
+    const ad = await this.findByIdForOwner(adId, user);
+
+    // Delete all images from Azure before deleting the ad
+    const images =
+      (ad as unknown as { images?: UploadedLandImage[] }).images ?? [];
+    for (const image of images) {
+      if (image?.filename && image.filename.includes('land-owner-ads')) {
+        await this.azureBlobStorageService.deleteFile(image.filename);
+      }
+    }
 
     await this.landOwnerAdModel.findByIdAndDelete(adId).exec();
 
@@ -299,18 +408,9 @@ export class LandOwnerAdsService {
     ).slice();
     const nextImages = [...existingImages, ...uploadedImages];
 
-    const updatePayload: {
-      images: UploadedLandImage[];
-      image?: UploadedLandImage;
-    } = {
+    const updatePayload = {
       images: nextImages,
     };
-
-    const currentPrimary = (ad as unknown as { image?: UploadedLandImage })
-      .image;
-    if (!currentPrimary?.filename) {
-      updatePayload.image = uploadedImages[0];
-    }
 
     const updated = await this.landOwnerAdModel
       .findByIdAndUpdate(adId, updatePayload, { new: true })
@@ -320,7 +420,7 @@ export class LandOwnerAdsService {
       throw new BadRequestException(T.adNotFound(adId));
     }
 
-    return updated;
+    return this.enrichAdWithImageUrls(updated);
   }
 
   async deleteLandImage(
@@ -341,33 +441,27 @@ export class LandOwnerAdsService {
     const existingImages = (
       (ad as unknown as { images?: UploadedLandImage[] }).images ?? []
     ).slice();
-    const primaryImage = (ad as unknown as { image?: UploadedLandImage }).image;
 
-    const inGallery = existingImages.some(
+    const imageExists = existingImages.some(
       (image) => image.filename === filename,
     );
-    const isPrimary = primaryImage?.filename === filename;
 
-    if (!inGallery && !isPrimary) {
+    if (!imageExists) {
       throw new BadRequestException(T.imageNotFound);
     }
 
-    await this.azureBlobStorageService.deleteFile(filename);
+    // Safety check: only delete files from land-owner-ads path
+    if (filename.includes('land-owner-ads')) {
+      await this.azureBlobStorageService.deleteFile(filename);
+    }
 
     const nextImages = existingImages.filter(
       (image) => image.filename !== filename,
     );
 
-    const updatePayload: {
-      images: UploadedLandImage[];
-      image?: UploadedLandImage;
-    } = {
+    const updatePayload = {
       images: nextImages,
     };
-
-    if (isPrimary) {
-      updatePayload.image = nextImages[0];
-    }
 
     const updated = await this.landOwnerAdModel
       .findByIdAndUpdate(adId, updatePayload, { new: true })
@@ -377,12 +471,31 @@ export class LandOwnerAdsService {
       throw new BadRequestException(T.adNotFound(adId));
     }
 
-    return updated;
+    return this.enrichAdWithImageUrls(updated);
   }
 
-  private async resolveRequester(
-    user: UserReal,
-  ): Promise<{ userId: string; isLandOwner: boolean }> {
+  private async enrichAdWithImageUrls(ad: any): Promise<any> {
+    const adObj = ad.toObject ? ad.toObject() : ad;
+
+    // Enrich images with URLs
+    if (adObj.images && Array.isArray(adObj.images)) {
+      for (const image of adObj.images) {
+        if (image?.filename) {
+          image.url = await this.azureBlobStorageService.getFileUrl(
+            image.filename as string,
+          );
+        }
+      }
+    }
+
+    return adObj;
+  }
+
+  private async resolveRequester(user: UserReal): Promise<{
+    userId: string;
+    isLandOwner: boolean;
+    profilePicture?: File;
+  }> {
     const userId = user.user || user.userId || user.sub;
     if (!userId) {
       throw new BadRequestException(T.unauthorizedUser);
@@ -396,6 +509,7 @@ export class LandOwnerAdsService {
     return {
       userId: String(selectedUser._id),
       isLandOwner: roleName === 'landowner',
+      profilePicture: selectedUser.personalInfo?.profilePicture,
     };
   }
 
