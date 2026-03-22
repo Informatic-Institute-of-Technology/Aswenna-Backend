@@ -93,6 +93,7 @@ export interface UserUpdateI {
   readonly farmerDetails?: FarmerDetailsI;
   readonly investorDetails?: InvestorDetailsI;
   readonly landOwnerDetails?: LandOwnerDetailsUpdateI;
+  readonly status?: string;
 }
 
 export interface UserUploadRequestHeadersI {

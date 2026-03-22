@@ -1,12 +1,14 @@
 import { Type } from 'class-transformer';
 import {
   IsBoolean,
+  IsEnum,
   IsOptional,
   IsPhoneNumber,
   IsString,
   ValidateIf,
   ValidateNested,
 } from 'class-validator';
+import { UserStatus } from '../schemas/user.schema';
 
 export class PersonalInfoDto {
   @IsOptional()
@@ -101,6 +103,10 @@ export class LandOwnerDetailsDto {
 }
 
 export class UserUpdateDto {
+  @IsOptional()
+  @IsEnum(UserStatus)
+  readonly status: UserStatus;
+
   @IsString()
   @IsOptional()
   readonly fullName: string;
@@ -122,19 +128,19 @@ export class UserUpdateDto {
   @IsString()
   readonly role: string;
 
-  @ValidateIf((o: UserUpdateDto) => o.role.toLowerCase() === 'farmer')
+  @ValidateIf((o: UserUpdateDto) => o.role?.toLowerCase() === 'farmer')
   @IsOptional()
   @ValidateNested()
   @Type(() => FarmerDetailsDto)
   readonly farmerDetails?: FarmerDetailsDto;
 
-  @ValidateIf((o: UserUpdateDto) => o.role.toLowerCase() === 'investor')
+  @ValidateIf((o: UserUpdateDto) => o.role?.toLowerCase() === 'investor')
   @IsOptional()
   @ValidateNested()
   @Type(() => InvestorDetailsDto)
   readonly investorDetails: InvestorDetailsDto;
 
-  @ValidateIf((o: UserUpdateDto) => o.role.toLowerCase() === 'landowner')
+  @ValidateIf((o: UserUpdateDto) => o.role?.toLowerCase() === 'landowner')
   @IsOptional()
   @ValidateNested()
   @Type(() => LandOwnerDetailsDto)
