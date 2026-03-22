@@ -28,11 +28,6 @@ import { LandOwnerAdsService } from './land-owner-ads.service';
 export class LandOwnerAdsController {
   constructor(private readonly landOwnerAdsService: LandOwnerAdsService) {}
 
-  @Post()
-  async create(@UserReal() user: UserReal, @Body() dto: CreateLandOwnerAdDto) {
-    return this.landOwnerAdsService.create(user, dto);
-  }
-
   @Get()
   async findAll(
     @UserReal() user: UserReal,
@@ -47,6 +42,11 @@ export class LandOwnerAdsController {
     @Param() params: LandOwnerAdParamsDto,
   ) {
     return this.landOwnerAdsService.findByIdForOwner(params.ad, user);
+  }
+
+  @Post()
+  async create(@UserReal() user: UserReal, @Body() ad: CreateLandOwnerAdDto) {
+    return this.landOwnerAdsService.create(user, ad);
   }
 
   @Patch(':ad')
