@@ -7,11 +7,16 @@ import {
   Patch,
   Post,
   Query,
+  UploadedFiles,
+  UseInterceptors,
 } from '@nestjs/common';
+import { AnyFilesInterceptor } from '@nestjs/platform-express';
+import { LEGACY_UPLOAD_MULTER_OPTIONS } from 'src/common/constants/upload.constants';
 import { Auth } from 'src/core/decorators/auth.decorator';
 import { UserReal } from 'src/core/decorators/user.decorators';
 import { CreateLandOwnerAdDto } from './dtos/land-owner-ad.create.dto';
 import {
+  LandOwnerAdImageDeleteQueryDto,
   LandOwnerAdParamsDto,
   LandOwnerAdQueryDto,
 } from './dtos/land-owner-ad.query.dto';
@@ -59,5 +64,28 @@ export class LandOwnerAdsController {
     @Param() params: LandOwnerAdParamsDto,
   ) {
     return this.landOwnerAdsService.deleteForOwner(params.ad, user);
+  }
+
+  @Post(':ad/images')
+  @UseInterceptors(AnyFilesInterceptor(LEGACY_UPLOAD_MULTER_OPTIONS))
+  async uploadImages(
+    @UserReal() user: UserReal,
+    @Param() params: LandOwnerAdParamsDto,
+    @UploadedFiles() files: any[],
+  ) {
+    return this.landOwnerAdsService.uploadLandImages(params.ad, user, files);
+  }
+
+  @Delete(':ad/images')
+  async deleteImage(
+    @UserReal() user: UserReal,
+    @Param() params: LandOwnerAdParamsDto,
+    @Query() query: LandOwnerAdImageDeleteQueryDto,
+  ) {
+    return this.landOwnerAdsService.deleteLandImage(
+      params.ad,
+      user,
+      query.filename,
+    );
   }
 }
