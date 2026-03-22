@@ -5,27 +5,8 @@ import {
   IsNumber,
   IsOptional,
   IsString,
-  ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
-
-class LandOwnerAdFileDto {
-  @IsString()
-  @IsNotEmpty()
-  readonly filename: string;
-
-  @IsString()
-  @IsNotEmpty()
-  readonly fileSize: string;
-
-  @IsString()
-  @IsNotEmpty()
-  readonly mimeType: string;
-
-  @IsString()
-  @IsOptional()
-  readonly url?: string;
-}
 
 export class CreateLandOwnerAdDto {
   @IsOptional()
@@ -65,8 +46,4 @@ export class CreateLandOwnerAdDto {
   @IsString()
   @IsNotEmpty()
   readonly additionalInfo: string;
-
-  @ValidateNested()
-  @Type(() => LandOwnerAdFileDto)
-  readonly image: LandOwnerAdFileDto;
 }
