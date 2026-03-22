@@ -1,259 +1,236 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
-import { InteractionRequest } from './schemas/request.schema';
-import { RequestGateway } from './request.gateway';
-import { RequestCreateI } from './request.types';
+import { FilterQuery, Model, Types } from 'mongoose';
+import { PaginatedResponseType } from 'src/common/interfaces/response.types';
+import { RequestCreateDto } from './dtos/request.create.dto';
+import { RequestQueryDto } from './dtos/request.query.dto';
+import {
+  OverwriteJourneyStepsDto,
+  RequestUpdateDto,
+  UpdateJourneyStepDto,
+} from './dtos/request.update.dto';
+import { UserRequest } from './schemas/request.schema';
 
 @Injectable()
 export class RequestService {
-  // private readonly validTransitions: Record<RequestStatus, RequestStatus[]> = {
-  //   [RequestStatus.PENDING]: [
-  //     RequestStatus.APPROVED,
-  //     RequestStatus.REJECTED,
-  //     RequestStatus.CANCELLED,
-  //   ],
-  //   [RequestStatus.APPROVED]: [],
-  //   [RequestStatus.REJECTED]: [],
-  //   [RequestStatus.CANCELLED]: [],
-  // };
-
   constructor(
-    @InjectModel(InteractionRequest.name)
-    private readonly requestModel: Model<InteractionRequest>,
-    private readonly requestGateway: RequestGateway,
+    @InjectModel(UserRequest.name)
+    private readonly requestModel: Model<UserRequest>,
   ) {}
 
-  async createRequest(
-    sender: string,
-    request: RequestCreateI,
-  ): Promise<InteractionRequest> {
-    if (sender === request.receiver)
-      throw new BadRequestException('Cannot send request to yourself');
+  async findAllForUser(
+    userId: string,
+    query: RequestQueryDto,
+  ): Promise<PaginatedResponseType<UserRequest[]>> {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 10;
 
-    const createdRequest = await this.requestModel.create({
-      ...request,
-      receiver: new Types.ObjectId(request.receiver),
-      targetId: new Types.ObjectId(request.targetId),
-      sender: new Types.ObjectId(sender),
-    });
+    const filter: FilterQuery<UserRequest> = {
+      $or: [
+        { recipient: new Types.ObjectId(userId) },
+        { receiver: new Types.ObjectId(userId) },
+      ],
+    };
 
-    this.requestGateway.sendNewRequest(
-      createdRequest.receiver.toString(),
-      createdRequest,
-    );
+    if (query.targetType) filter.targetType = query.targetType;
+    if (query.target) filter.target = new Types.ObjectId(query.target);
+    if (query.status) filter.status = query.status;
 
-    return createdRequest;
+    if (query.recipient || query.receiver) {
+      const recipientFilter = query.recipient
+        ? new Types.ObjectId(query.recipient)
+        : undefined;
+      const receiverFilter = query.receiver
+        ? new Types.ObjectId(query.receiver)
+        : undefined;
+
+      const requestedSelf =
+        recipientFilter?.toString() === userId ||
+        receiverFilter?.toString() === userId;
+
+      if (!requestedSelf) {
+        throw new ForbiddenException(
+          'You can only filter by recipient/receiver when one is your own user id',
+        );
+      }
+
+      if (recipientFilter) filter.recipient = recipientFilter;
+      if (receiverFilter) filter.receiver = receiverFilter;
+    }
+
+    const [data, totalDocs] = await Promise.all([
+      this.requestModel
+        .find(filter)
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .exec(),
+      this.requestModel.countDocuments(filter),
+    ]);
+
+    const totalPages = Math.ceil(totalDocs / limit);
+
+    return {
+      data,
+      pagination: {
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1,
+        limit,
+        nextPage: page + 1,
+        page,
+        prevPage: page - 1,
+        totalDocs,
+        totalPages,
+      },
+    };
   }
 
-  // async updateRequestStatus(
-  //   requestId: string,
-  //   responderId: string,
-  //   dto: UpdateRequestStatusDto,
-  // ): Promise<IRequestResponse> {
-  //   const request = await this.requestModel.findById(requestId);
+  async findByIdForUser(id: string, userId: string): Promise<UserRequest> {
+    const request = await this.requestModel.findById(id);
+    if (!request) throw new NotFoundException('Request not found');
 
-  //   if (!request) {
-  //     throw new NotFoundException(`Request ${requestId} not found`);
-  //   }
+    this.assertUserCanAccess(request, userId);
+    return request;
+  }
 
-  //   // Verify receiver is updating the status
-  //   if (request.receiver.toString() !== responderId) {
-  //     throw new BadRequestException('Only receiver can approve/reject');
-  //   }
+  async createRequest(dto: RequestCreateDto): Promise<UserRequest> {
+    this.ensureRecipientOrReceiverRole(dto.recipient, dto.receiver);
 
-  //   // Check if current status allows transition
-  //   const currentStatus = request.status;
-  //   const allowedTransitions = this.validTransitions[currentStatus];
+    return this.requestModel.create({
+      ...dto,
+      target: new Types.ObjectId(dto.target),
+      recipient: new Types.ObjectId(dto.recipient),
+      receiver: new Types.ObjectId(dto.receiver),
+      timestamp: dto.timestamp ? new Date(dto.timestamp) : undefined,
+      highlighted: dto.highlighted ?? false,
+    });
+  }
 
-  //   if (!allowedTransitions.includes(dto.status)) {
-  //     throw new BadRequestException(
-  //       `Cannot transition from ${currentStatus} to ${dto.status}`,
-  //     );
-  //   }
+  async updateForUser(
+    id: string,
+    userId: string,
+    dto: RequestUpdateDto,
+  ): Promise<UserRequest> {
+    const request = await this.requestModel.findById(id);
+    if (!request) throw new NotFoundException('Request not found');
+    this.assertUserCanAccess(request, userId);
 
-  //   // Update status
-  //   request.status = dto.status;
-  //   request.responseAt = new Date();
-  //   request.updatedAt = new Date();
+    if (dto.recipient || dto.receiver) {
+      this.ensureRecipientOrReceiverRole(
+        dto.recipient ?? request.recipient.toString(),
+        dto.receiver ?? request.receiver.toString(),
+      );
+    }
 
-  //   const updated = await request.save();
-  //   const response = this.formatResponse(updated);
+    if (dto.target) request.target = new Types.ObjectId(dto.target);
+    if (dto.recipient) request.recipient = new Types.ObjectId(dto.recipient);
+    if (dto.receiver) request.receiver = new Types.ObjectId(dto.receiver);
+    if (dto.status !== undefined) request.status = dto.status;
+    if (dto.statusBadge) request.statusBadge = dto.statusBadge;
+    if (dto.tags) request.tags = dto.tags;
+    if (dto.description !== undefined) request.description = dto.description;
+    if (dto.timestamp !== undefined)
+      request.timestamp = new Date(dto.timestamp);
+    if (dto.investmentAmount !== undefined)
+      request.investmentAmount = dto.investmentAmount;
+    if (dto.insight !== undefined) request.insight = dto.insight;
+    if (dto.highlighted !== undefined) request.highlighted = dto.highlighted;
 
-  //   // Send WebSocket notification to sender
-  //   this.sendStatusUpdateNotification(response);
+    return request.save();
+  }
 
-  //   return response;
-  // }
+  async deleteForUser(id: string, userId: string): Promise<{ deleted: true }> {
+    const request = await this.requestModel.findById(id);
+    if (!request) throw new NotFoundException('Request not found');
+    this.assertUserCanAccess(request, userId);
 
-  // async cancelRequest(
-  //   requestId: string,
-  //   senderId: string,
-  // ): Promise<IRequestResponse> {
-  //   const request = await this.requestModel.findById(requestId);
+    await this.requestModel.deleteOne({ _id: request._id });
+    return { deleted: true };
+  }
 
-  //   if (!request) {
-  //     throw new NotFoundException(`Request ${requestId} not found`);
-  //   }
+  async addJourneyStep(
+    requestId: string,
+    userId: string,
+    dto: { step: any },
+  ): Promise<UserRequest> {
+    const request = await this.findByIdForUser(requestId, userId);
+    request.journeySteps.push(dto.step);
+    return request.save();
+  }
 
-  //   // Verify sender is cancelling the request
-  //   if (request.sender.toString() !== senderId) {
-  //     throw new BadRequestException('Only sender can cancel');
-  //   }
+  async updateJourneyStep(
+    requestId: string,
+    stepId: string,
+    userId: string,
+    dto: UpdateJourneyStepDto,
+  ): Promise<UserRequest> {
+    const request = await this.findByIdForUser(requestId, userId);
+    const step = request.journeySteps.find(
+      (item) => item._id.toString() === stepId,
+    );
 
-  //   // Check if request is still pending
-  //   if (request.status !== RequestStatus.PENDING) {
-  //     throw new BadRequestException(
-  //       `Cannot cancel request with status ${request.status}`,
-  //     );
-  //   }
+    if (!step) throw new NotFoundException('Journey step not found');
 
-  //   request.status = RequestStatus.CANCELLED;
-  //   request.responseAt = new Date();
-  //   request.updatedAt = new Date();
+    step.title = dto.step.title;
+    step.description = dto.step.description;
+    step.timestamp = dto.step.timestamp;
+    step.status = dto.step.status;
+    step.icon = dto.step.icon;
 
-  //   const updated = await request.save();
-  //   const response = this.formatResponse(updated);
+    return request.save();
+  }
 
-  //   this.requestGateway.sendNewRequest(response);
+  async removeJourneyStep(
+    requestId: string,
+    stepId: string,
+    userId: string,
+  ): Promise<UserRequest> {
+    const request = await this.findByIdForUser(requestId, userId);
+    request.journeySteps = request.journeySteps.filter(
+      (item) => item._id.toString() !== stepId,
+    );
 
-  //   return response;
-  // }
+    return request.save();
+  }
 
-  // async getReceiverRequests(
-  //   receiverId: string,
-  //   status?: RequestStatus,
-  //   page: number = 1,
-  //   limit: number = 10,
-  // ): Promise<{ data: IRequestResponse[]; total: number }> {
-  //   const query: any = {
-  //     receiver: new Types.ObjectId(receiverId),
-  //   };
+  async overwriteJourneySteps(
+    requestId: string,
+    userId: string,
+    dto: OverwriteJourneyStepsDto,
+  ): Promise<UserRequest> {
+    const request = await this.findByIdForUser(requestId, userId);
+    request.journeySteps = dto.journeySteps as any;
+    return request.save();
+  }
 
-  //   if (status) {
-  //     query.status = status;
-  //   }
+  private assertUserCanAccess(request: UserRequest, userId: string): void {
+    const isRecipient = request.recipient.toString() === userId;
+    const isReceiver = request.receiver.toString() === userId;
 
-  //   const total = await this.requestModel.countDocuments(query);
-  //   const data = await this.requestModel
-  //     .find(query)
-  //     .sort({ createdAt: -1 })
-  //     .skip((page - 1) * limit)
-  //     .limit(limit);
+    if (!isRecipient && !isReceiver) {
+      throw new ForbiddenException(
+        'You can only access requests where you are recipient or receiver',
+      );
+    }
+  }
 
-  //   return {
-  //     data: data.map((req) => this.formatResponse(req)),
-  //     total,
-  //   };
-  // }
+  private ensureRecipientOrReceiverRole(
+    recipient: string,
+    receiver: string,
+  ): void {
+    if (!recipient || !receiver) {
+      throw new BadRequestException('recipient and receiver are required');
+    }
 
-  // async getSenderRequests(
-  //   senderId: string,
-  //   status?: RequestStatus,
-  //   page: number = 1,
-  //   limit: number = 10,
-  // ): Promise<{ data: IRequestResponse[]; total: number }> {
-  //   const query: any = {
-  //     sender: new Types.ObjectId(senderId),
-  //   };
-
-  //   if (status) {
-  //     query.status = status;
-  //   }
-
-  //   const total = await this.requestModel.countDocuments(query);
-  //   const data = await this.requestModel
-  //     .find(query)
-  //     .sort({ createdAt: -1 })
-  //     .skip((page - 1) * limit)
-  //     .limit(limit);
-
-  //   return {
-  //     data: data.map((req) => this.formatResponse(req)),
-  //     total,
-  //   };
-  // }
-
-  // async getRequestById(requestId: string): Promise<IRequestResponse> {
-  //   const request = await this.requestModel.findById(requestId);
-
-  //   if (!request) {
-  //     throw new NotFoundException(`Request ${requestId} not found`);
-  //   }
-
-  //   return this.formatResponse(request);
-  // }
-
-  // async getTargetRequests(
-  //   targetId: string,
-  //   targetType: RequestType,
-  // ): Promise<IRequestResponse[]> {
-  //   const requests = await this.requestModel.find({
-  //     target: new Types.ObjectId(targetId),
-  //     targetType,
-  //   });
-
-  //   return requests.map((req) => this.formatResponse(req));
-  // }
-
-  // private formatResponse(doc: InteractionRequest): IRequestResponse {
-  //   return {
-  //     _id: doc._id.toString(),
-  //     sender: doc.sender.toString(),
-  //     receiver: doc.receiver.toString(),
-  //     type: doc.type,
-  //     targetId: doc.target.toString(),
-  //     targetType: doc.targetType,
-  //     status: doc.status,
-  //     responseAt: doc.responseAt,
-  //     metadata: doc.metadata,
-  //     createdAt: doc.createdAt,
-  //     updatedAt: doc.updatedAt,
-  //   };
-  // }
-
-  // private sendNewRequestNotification(request: IRequestResponse) {
-  //   const payload: IWebSocketRequestEvent = {
-  //     requestId: request._id,
-  //     sender: request.sender,
-  //     receiver: request.receiver,
-  //     type: request.type,
-  //     targetId: request.targetId,
-  //     targetType: request.targetType,
-  //     status: request.status,
-  //     metadata: request.metadata,
-  //     timestamp: request.createdAt,
-  //   };
-  //   this.requestGateway.sendNewRequest(request.receiver, payload);
-  // }
-
-  // private sendStatusUpdateNotification(request: IRequestResponse) {
-  //   const payload: IWebSocketRequestEvent = {
-  //     requestId: request._id,
-  //     sender: request.sender,
-  //     receiver: request.receiver,
-  //     type: request.type,
-  //     targetId: request.targetId,
-  //     targetType: request.targetType,
-  //     status: request.status,
-  //     metadata: request.metadata,
-  //     timestamp: request.updatedAt,
-  //   };
-  //   this.requestGateway.sendStatusUpdate(request.sender, payload);
-  // }
-
-  // private sendCancellationNotification(request: IRequestResponse) {
-  //   const payload: IWebSocketRequestEvent = {
-  //     requestId: request._id,
-  //     sender: request.sender,
-  //     receiver: request.receiver,
-  //     type: request.type,
-  //     targetId: request.targetId,
-  //     targetType: request.targetType,
-  //     status: request.status,
-  //     metadata: request.metadata,
-  //     timestamp: request.updatedAt,
-  //   };
-  //   this.requestGateway.sendRequestCancelled(payload);
-  // }
+    if (recipient === receiver) {
+      throw new BadRequestException(
+        'recipient and receiver must be different users',
+      );
+    }
+  }
 }
