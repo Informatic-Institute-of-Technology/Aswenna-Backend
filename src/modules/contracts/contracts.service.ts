@@ -4,7 +4,7 @@ import { Model, Types, FilterQuery } from 'mongoose';
 import { Contract } from './schemas/contract.schema';
 import { ContractCreateI, MilestoneI, LandRentalI } from './contracts.types';
 import { OfferService } from '../investor/offer/offer.service';
-import { LandOwnerAd } from '../land-owner/ads/schemas/land-owner-ad.schema';
+import { LandOwnerAd } from '../land-owner/land-ads/schemas/land-owner-ad.schema';
 import { PaymentsService } from '../payments/payments.service';
 import { CreatePaymentI } from '../payments/payments.types';
 import { OfferType } from '../investor/offer/schemas/offer.schema';
