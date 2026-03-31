@@ -1,6 +1,9 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
+import { File } from 'src/common/schemas/file.schema';
 import { Meta } from 'src/common/schemas/meta.schema';
+import { FarmerProject } from 'src/modules/farmer/schemas/farmer-project.schema';
+import { LandOwnerAd } from 'src/modules/land-owner/land-ads/schemas/land-owner-ad.schema';
 import { User } from 'src/modules/user/schemas/user.schema';
 
 export enum OfferType {
@@ -114,6 +117,24 @@ export class Offer extends Document {
 
   @Prop({ required: true, default: 0 })
   readonly applicationsCount: number;
+
+  @Prop({ type: Types.ObjectId, ref: User.name })
+  readonly farmer?: User;
+
+  @Prop({ type: Types.ObjectId, ref: FarmerProject.name })
+  readonly farmerProject?: FarmerProject;
+
+  @Prop(File)
+  readonly farmerAgreement?: File;
+
+  @Prop({ type: Types.ObjectId, ref: User.name })
+  readonly landowner?: User;
+
+  @Prop({ type: Types.ObjectId, ref: LandOwnerAd.name })
+  readonly landownerProject?: LandOwnerAd;
+
+  @Prop(File)
+  readonly landownerAgreement?: File;
 
   @Prop({ type: HarvestBaseDetails })
   readonly harvestBaseDetails?: HarvestBaseDetails;

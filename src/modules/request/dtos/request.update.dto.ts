@@ -3,6 +3,7 @@ import {
   IsArray,
   IsBoolean,
   IsDateString,
+  IsEnum,
   IsMongoId,
   IsNotEmpty,
   IsOptional,
@@ -10,6 +11,7 @@ import {
   ValidateNested,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+import { RequestStatus } from '../schemas/request.schema';
 import {
   RequestJourneyStepDto,
   RequestStatusBadgeDto,
@@ -30,8 +32,8 @@ export class RequestUpdateDto {
   receiver?: string;
 
   @IsOptional()
-  @IsString()
-  status?: string;
+  @IsEnum(RequestStatus)
+  status?: RequestStatus;
 
   @IsOptional()
   @ValidateNested()
