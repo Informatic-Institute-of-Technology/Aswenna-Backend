@@ -114,6 +114,12 @@ export class PaymentsService {
     return payment;
   }
 
+  async findByContractId(contractId: Types.ObjectId): Promise<ContractPayment[]> {
+    return this.paymentModel
+      .find({ contract: contractId })
+      .exec();
+  }
+
   async deleteById(id: string): Promise<{ deleted: true }> {
     const deleted = await this.paymentModel
       .findByIdAndDelete(this.asObjectId(id, 'payment'))

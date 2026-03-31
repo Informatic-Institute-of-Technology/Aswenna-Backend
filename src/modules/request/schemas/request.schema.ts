@@ -1,5 +1,12 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
+export enum RequestStatus {
+  PENDING = 'pending',
+  APPROVED = 'approved',
+  REJECTED = 'rejected',
+  CANCELLED = 'cancelled',
+  COMPLETED = 'completed',
+}
 
 export enum RequestTargetType {
   OFFER = 'offer',
@@ -64,8 +71,8 @@ export class UserRequest extends Document {
   @Prop({ type: Types.ObjectId, required: true })
   receiver: Types.ObjectId;
 
-  @Prop({ type: String, default: 'pending' })
-  status: string;
+  @Prop({ type: String, enum: RequestStatus, default: RequestStatus.PENDING })
+  status: RequestStatus;
 
   @Prop({ type: RequestStatusBadge, required: true })
   statusBadge: RequestStatusBadge;

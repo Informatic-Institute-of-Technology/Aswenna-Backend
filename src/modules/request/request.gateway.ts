@@ -7,7 +7,7 @@ import {
 } from '@nestjs/websockets';
 import { Server, Socket } from 'socket.io';
 import { Injectable } from '@nestjs/common';
-import { InteractionRequest } from './schemas/request.schema';
+import type { IRequestResponse } from './request.types';
 
 @WebSocketGateway({ namespace: 'requests', cors: true })
 @Injectable()
@@ -17,20 +17,20 @@ export class RequestGateway {
 
   constructor() {}
 
-  sendNewRequest(receiver: string, payload: InteractionRequest) {
+  sendNewRequest(userId: string, payload: IRequestResponse) {
     if (this.server)
-      this.server.to(`user:${receiver}`).emit('new-request', payload);
+      this.server.to(`user:${userId}`).emit('new-request', payload);
   }
 
-  sendStatusUpdate(sender: string, payload: InteractionRequest) {
+  sendStatusUpdate(userId: string, payload: IRequestResponse) {
     if (this.server)
-      this.server.to(`user:${sender}`).emit('request-updated', payload);
+      this.server.to(`user:${userId}`).emit('request-updated', payload);
   }
 
-  sendRequestCancelled(payload: InteractionRequest) {
+  sendRequestCancelled(payload: IRequestResponse) {
     if (this.server) {
       this.server
-        .to(`user:${payload.sender.toString()}`)
+        .to(`user:${payload.recipient.toString()}`)
         .emit('request-cancelled', payload);
       this.server
         .to(`user:${payload.receiver.toString()}`)

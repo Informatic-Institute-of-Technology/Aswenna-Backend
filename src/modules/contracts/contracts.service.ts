@@ -8,6 +8,7 @@ import { LandOwnerAd } from '../land-owner/land-ads/schemas/land-owner-ad.schema
 import { PaymentsService } from '../payments/payments.service';
 import { CreatePaymentI } from '../payments/payments.types';
 import { OfferType } from '../investor/offer/schemas/offer.schema';
+import { PaymentStatus } from '../payments/schemas/payment.schema';
 
 @Injectable()
 export class ContractsService {
@@ -866,7 +867,7 @@ export class ContractsService {
       amount: milestone.payment,
       dueDate: new Date(milestone.endDate),
       description: milestone.title,
-      status: 'pending',
+      status: PaymentStatus.PENDING,
     }));
   }
 }
