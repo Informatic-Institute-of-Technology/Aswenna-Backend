@@ -37,11 +37,7 @@ export class CommissionDetailsDto {
 export class CostBreakdownItemDto {
   @IsNotEmpty()
   @IsString()
-  readonly category: string;
-
-  @IsNotEmpty()
-  @IsString()
-  readonly description: string;
+  readonly title: string;
 
   @IsNotEmpty()
   @IsNumber()
@@ -51,15 +47,23 @@ export class CostBreakdownItemDto {
 export class MilestoneBreakdownItemDto {
   @IsNotEmpty()
   @IsString()
-  readonly milestone: string;
-
-  @IsNotEmpty()
-  @IsString()
-  readonly description: string;
+  readonly title: string;
 
   @IsNotEmpty()
   @IsNumber()
   readonly estimatedAmount: number;
+
+  @IsNotEmpty()
+  @IsDateString()
+  readonly paymentOverDueDate: Date;
+
+  @IsNotEmpty()
+  @IsDateString()
+  readonly startDate: Date;
+
+  @IsNotEmpty()
+  @IsDateString()
+  readonly endDate: Date;
 }
 
 export class ProjectCreateDto {

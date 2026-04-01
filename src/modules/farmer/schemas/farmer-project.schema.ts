@@ -25,10 +25,7 @@ export enum ProjectStatus {
 @Schema({ _id: false })
 export class CostBreakdownItem {
   @Prop()
-  readonly category: string;
-
-  @Prop()
-  readonly description: string;
+  readonly title: string;
 
   @Prop()
   readonly estimatedCost: number;
@@ -37,13 +34,19 @@ export class CostBreakdownItem {
 @Schema({ _id: false })
 export class MilestoneBreakdownItem {
   @Prop()
-  readonly milestone: string;
-
-  @Prop()
-  readonly description: string;
+  readonly title: string;
 
   @Prop()
   readonly estimatedAmount: number;
+
+  @Prop()
+  readonly paymentOverDueDate: Date;
+
+  @Prop()
+  readonly startDate: Date;
+
+  @Prop()
+  readonly endDate: Date;
 }
 
 @Schema({ _id: false })

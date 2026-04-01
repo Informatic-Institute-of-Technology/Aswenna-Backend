@@ -20,6 +20,7 @@ export enum FarmingMethod {
 export enum OfferStatus {
   PENDING = 'pending',
   ACTIVE = 'active',
+  OPEN = 'open',
   CLOSED = 'closed',
   EXPIRED = 'expired',
 }
@@ -84,6 +85,33 @@ export class CommissionDetails {
   preferredRegions: string[];
 }
 
+@Schema({ _id: false })
+export class OfferCostBreakdownItem {
+  @Prop({ required: true })
+  title: string;
+
+  @Prop({ required: true })
+  estimatedCost: number;
+}
+
+@Schema({ _id: false })
+export class OfferMilestoneBreakdownItem {
+  @Prop({ required: true })
+  title: string;
+
+  @Prop({ required: true })
+  estimatedAmount: number;
+
+  @Prop({ required: true })
+  paymentOverDueDate: Date;
+
+  @Prop({ required: true })
+  startDate: Date;
+
+  @Prop({ required: true })
+  endDate: Date;
+}
+
 @Schema({ timestamps: true })
 export class Offer extends Document {
   declare readonly _id: Types.ObjectId;
@@ -141,6 +169,12 @@ export class Offer extends Document {
 
   @Prop({ type: CommissionDetails })
   readonly commissionDetails?: CommissionDetails;
+
+  @Prop([OfferCostBreakdownItem])
+  readonly costBreakdown?: OfferCostBreakdownItem[];
+
+  @Prop([OfferMilestoneBreakdownItem])
+  readonly milestoneBreakdown?: OfferMilestoneBreakdownItem[];
 
   @Prop([Meta])
   readonly meta: Meta[];

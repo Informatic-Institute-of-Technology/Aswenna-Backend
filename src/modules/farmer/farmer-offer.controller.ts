@@ -16,11 +16,6 @@ export class FarmerOfferController {
     @Param() params: FarmerOfferParamsDto,
     @Body() dto: UpdateOfferByFarmerDto,
   ) {
-    return this.offerService.linkFarmerToOffer(
-      params.offer,
-      user.user,
-      dto.farmerProjectId,
-      dto.farmerId,
-    );
+    return this.offerService.linkFarmerToOffer(params.offer, user.user, dto);
   }
 }

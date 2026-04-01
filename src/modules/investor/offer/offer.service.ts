@@ -12,19 +12,24 @@ import { Offer, OfferStatus, OfferType } from './schemas/offer.schema';
 import { PaginatedResponseType } from 'src/common/interfaces/response.types';
 import { AzureBlobStorageService } from 'src/config/azure/services/azure-blob-storage.service';
 import { FileUploadResponse } from 'src/config/azure/types/azure-blob.types';
-import { FarmerProject } from 'src/modules/farmer/schemas/farmer-project.schema';
+import {
+  FarmerProject,
+  ProjectStatus,
+  ProjectType,
+} from 'src/modules/farmer/schemas/farmer-project.schema';
 import { LandOwnerAd } from 'src/modules/land-owner/land-ads/schemas/land-owner-ad.schema';
 import { User } from 'src/modules/user/schemas/user.schema';
+import { UpdateOfferByFarmerDto } from 'src/modules/farmer/dtos/update-offer-by-farmer.dto';
 
 const T = {
   offerNotFoundById: (id: string) => `Offer with ID ${id} not found`,
   userNotFoundById: (id: string) => `User with ID ${id} not found`,
   farmerProjectNotFoundById: (id: string) =>
     `Farmer project with ID ${id} not found`,
+  farmerProjectNotFound:
+    'No farmer project found for this farmer and offer type. Create a matching farmer project first',
   landownerProjectNotFoundById: (id: string) =>
     `Land owner project with ID ${id} not found`,
-  farmerIdMismatch:
-    'The farmer ID in the payload must match the authenticated farmer',
   landownerIdMismatch:
     'The land owner ID in the payload must match the authenticated land owner',
   farmerProjectOwnership:
@@ -351,30 +356,34 @@ export class OfferService {
   async linkFarmerToOffer(
     offerId: string,
     actorUserId: string,
-    farmerProjectId: string,
-    farmerId?: string,
+    payload: UpdateOfferByFarmerDto,
   ): Promise<Offer> {
     await this.expireOffers();
 
-    if (farmerId && farmerId !== actorUserId) {
-      throw new ForbiddenException(T.farmerIdMismatch);
-    }
-
-    const resolvedFarmerId = farmerId ?? actorUserId;
+    const resolvedFarmerId = actorUserId;
     const offer = await this.findOfferOrThrow(offerId);
+    const projectType =
+      offer.offerType === OfferType.SPONSORSHIP
+        ? ProjectType.COMMISSION
+        : ProjectType.HARVEST;
 
     await this.ensureUserExists(resolvedFarmerId);
 
     const farmerProject = await this.farmerProjectModel
-      .findById(farmerProjectId)
-      .select('farmer')
+      .findOne({
+        farmer: new Types.ObjectId(resolvedFarmerId),
+        offerType: projectType,
+        status: { $ne: ProjectStatus.ARCHIVED },
+      })
+      .sort({ updatedAt: -1, createdAt: -1 })
+      .select('_id farmer')
       .exec();
 
     if (!farmerProject) {
-      throw new BadRequestException(
-        T.farmerProjectNotFoundById(farmerProjectId),
-      );
+      throw new BadRequestException(T.farmerProjectNotFound);
     }
+
+    const farmerProjectId = farmerProject._id.toString();
 
     const projectOwnerId = this.extractObjectIdString(farmerProject.farmer);
     if (projectOwnerId !== resolvedFarmerId) {
@@ -400,6 +409,8 @@ export class OfferService {
           $set: {
             farmer: new Types.ObjectId(resolvedFarmerId),
             farmerProject: new Types.ObjectId(farmerProjectId),
+            costBreakdown: payload.costBreakdown,
+            milestoneBreakdown: payload.milestoneBreakdown,
           },
           ...(shouldResetAgreement ? { $unset: { farmerAgreement: 1 } } : {}),
         },

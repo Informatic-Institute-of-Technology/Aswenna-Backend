@@ -18,15 +18,16 @@ export enum ProjectStatus {
 }
 
 export interface CostBreakdownItemI {
-  readonly category: string;
-  readonly description: string;
+  readonly title: string;
   readonly estimatedCost: number;
 }
 
 export interface MilestoneBreakdownItemI {
-  readonly milestone: string;
-  readonly description: string;
+  readonly title: string;
   readonly estimatedAmount: number;
+  readonly paymentOverDueDate: Date;
+  readonly startDate: Date;
+  readonly endDate: Date;
 }
 
 export interface HarvestBasedDetailsI {
