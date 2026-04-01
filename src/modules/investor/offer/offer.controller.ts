@@ -24,6 +24,7 @@ export class OfferController {
       query.search,
       query.sort,
       query.type,
+      query.status,
     );
   }
 

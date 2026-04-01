@@ -93,6 +93,7 @@ export class OfferService {
     search: string,
     sort: string,
     type?: OfferType,
+    status?: OfferStatus,
   ): Promise<PaginatedResponseType<Offer[]>> {
     await this.expireOffers();
 
@@ -107,6 +108,7 @@ export class OfferService {
     const filter: Record<string, unknown> = {};
 
     if (type) filter.offerType = type;
+    if (status) filter.status = status;
 
     if (search) {
       filter.$or = [
