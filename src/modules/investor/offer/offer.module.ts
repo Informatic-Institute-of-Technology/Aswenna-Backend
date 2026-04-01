@@ -9,6 +9,7 @@ import {
   LandOwnerAd,
   LandOwnerAdSchema,
 } from 'src/modules/land-owner/land-ads/schemas/land-owner-ad.schema';
+import { PaymentsModule } from 'src/modules/payments/payments.module';
 import { User, UserSchema } from 'src/modules/user/schemas/user.schema';
 import { OfferController } from './offer.controller';
 import { OfferService } from './offer.service';
@@ -24,6 +25,7 @@ import { OfferExpiryCron } from './helpers/offer-expiry.cron';
       { name: LandOwnerAd.name, schema: LandOwnerAdSchema },
     ]),
     AzureConfigModule,
+    PaymentsModule,
   ],
   controllers: [OfferController],
   providers: [OfferService, OfferExpiryCron],

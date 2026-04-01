@@ -15,6 +15,8 @@ import { FileUploadResponse } from 'src/config/azure/types/azure-blob.types';
 import { LandOwnerAd } from 'src/modules/land-owner/land-ads/schemas/land-owner-ad.schema';
 import { User } from 'src/modules/user/schemas/user.schema';
 import { UpdateOfferByFarmerDto } from 'src/modules/farmer/dtos/update-offer-by-farmer.dto';
+import { PaymentsService } from 'src/modules/payments/payments.service';
+import { PaymentStatus } from 'src/modules/payments/schemas/payment.schema';
 
 const T = {
   offerNotFoundById: (id: string) => `Offer with ID ${id} not found`,
@@ -44,6 +46,7 @@ export class OfferService {
     @InjectModel(User.name) private readonly userModel: Model<User>,
     @InjectModel(LandOwnerAd.name)
     private readonly landOwnerAdModel: Model<LandOwnerAd>,
+    private readonly paymentsService: PaymentsService,
     private readonly azureBlobStorageService: AzureBlobStorageService,
   ) {}
 
@@ -393,7 +396,30 @@ export class OfferService {
       )
       .exec();
 
+    await this.createPaymentsFromMilestones(offerId, resolvedFarmerId, payload);
+
     return this.findOfferOrThrow(offerId);
+  }
+
+  private async createPaymentsFromMilestones(
+    contractId: string,
+    farmerId: string,
+    payload: UpdateOfferByFarmerDto,
+  ): Promise<void> {
+    if (!payload.milestoneBreakdown?.length) {
+      return;
+    }
+
+    await this.paymentsService.createMany(
+      payload.milestoneBreakdown.map((milestone) => ({
+        user: new Types.ObjectId(farmerId),
+        contract: new Types.ObjectId(contractId),
+        amount: milestone.estimatedAmount,
+        dueDate: new Date(milestone.paymentOverDueDate),
+        status: PaymentStatus.PENDING,
+        description: milestone.title,
+      })),
+    );
   }
 
   async uploadFarmerAgreement(
