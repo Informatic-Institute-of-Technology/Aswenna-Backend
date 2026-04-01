@@ -12,11 +12,6 @@ import { Offer, OfferStatus, OfferType } from './schemas/offer.schema';
 import { PaginatedResponseType } from 'src/common/interfaces/response.types';
 import { AzureBlobStorageService } from 'src/config/azure/services/azure-blob-storage.service';
 import { FileUploadResponse } from 'src/config/azure/types/azure-blob.types';
-import {
-  FarmerProject,
-  ProjectStatus,
-  ProjectType,
-} from 'src/modules/farmer/schemas/farmer-project.schema';
 import { LandOwnerAd } from 'src/modules/land-owner/land-ads/schemas/land-owner-ad.schema';
 import { User } from 'src/modules/user/schemas/user.schema';
 import { UpdateOfferByFarmerDto } from 'src/modules/farmer/dtos/update-offer-by-farmer.dto';
@@ -24,10 +19,7 @@ import { UpdateOfferByFarmerDto } from 'src/modules/farmer/dtos/update-offer-by-
 const T = {
   offerNotFoundById: (id: string) => `Offer with ID ${id} not found`,
   userNotFoundById: (id: string) => `User with ID ${id} not found`,
-  farmerProjectNotFoundById: (id: string) =>
-    `Farmer project with ID ${id} not found`,
-  farmerProjectNotFound:
-    'No farmer project found for this farmer and offer type. Create a matching farmer project first',
+  farmerAlreadyLinked: 'A farmer is already connected to this investor offer',
   landownerProjectNotFoundById: (id: string) =>
     `Land owner project with ID ${id} not found`,
   landownerIdMismatch:
@@ -50,8 +42,6 @@ export class OfferService {
   constructor(
     @InjectModel(Offer.name) private readonly offerModel: Model<Offer>,
     @InjectModel(User.name) private readonly userModel: Model<User>,
-    @InjectModel(FarmerProject.name)
-    private readonly farmerProjectModel: Model<FarmerProject>,
     @InjectModel(LandOwnerAd.name)
     private readonly landOwnerAdModel: Model<LandOwnerAd>,
     private readonly azureBlobStorageService: AzureBlobStorageService,
@@ -188,7 +178,10 @@ export class OfferService {
       true,
     );
 
-    const createdOffer = await this.offerModel.create(mappedPayload);
+    const createdOffer = await this.offerModel.create({
+      ...mappedPayload,
+      status: OfferStatus.OPEN,
+    });
 
     return this.findOfferOrThrow(createdOffer._id.toString());
   }
@@ -362,41 +355,19 @@ export class OfferService {
 
     const resolvedFarmerId = actorUserId;
     const offer = await this.findOfferOrThrow(offerId);
-    const projectType =
-      offer.offerType === OfferType.SPONSORSHIP
-        ? ProjectType.COMMISSION
-        : ProjectType.HARVEST;
 
     await this.ensureUserExists(resolvedFarmerId);
 
-    const farmerProject = await this.farmerProjectModel
-      .findOne({
-        farmer: new Types.ObjectId(resolvedFarmerId),
-        offerType: projectType,
-        status: { $ne: ProjectStatus.ARCHIVED },
-      })
-      .sort({ updatedAt: -1, createdAt: -1 })
-      .select('_id farmer')
-      .exec();
-
-    if (!farmerProject) {
-      throw new BadRequestException(T.farmerProjectNotFound);
-    }
-
-    const farmerProjectId = farmerProject._id.toString();
-
-    const projectOwnerId = this.extractObjectIdString(farmerProject.farmer);
-    if (projectOwnerId !== resolvedFarmerId) {
-      throw new ForbiddenException(T.farmerProjectOwnership);
-    }
-
     const previousFarmerId = this.extractObjectIdString(offer.farmer);
-    const previousFarmerProjectId = this.extractObjectIdString(
-      offer.farmerProject,
+
+    if (previousFarmerId) {
+      throw new BadRequestException(T.farmerAlreadyLinked);
+    }
+
+    const shouldResetAgreement = previousFarmerId !== resolvedFarmerId;
+    const hasLinkedLandowner = Boolean(
+      this.extractObjectIdString(offer.landowner),
     );
-    const shouldResetAgreement =
-      previousFarmerId !== resolvedFarmerId ||
-      previousFarmerProjectId !== farmerProjectId;
 
     if (shouldResetAgreement) {
       await this.deleteStoredFile(offer.farmerAgreement?.filename);
@@ -408,11 +379,13 @@ export class OfferService {
         {
           $set: {
             farmer: new Types.ObjectId(resolvedFarmerId),
-            farmerProject: new Types.ObjectId(farmerProjectId),
             costBreakdown: payload.costBreakdown,
             milestoneBreakdown: payload.milestoneBreakdown,
+            ...(hasLinkedLandowner ? { status: OfferStatus.PENDING } : {}),
           },
-          ...(shouldResetAgreement ? { $unset: { farmerAgreement: 1 } } : {}),
+          ...(shouldResetAgreement
+            ? { $unset: { farmerAgreement: 1, farmerProject: 1 } }
+            : { $unset: { farmerProject: 1 } }),
         },
         { new: true },
       )
