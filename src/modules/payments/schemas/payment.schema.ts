@@ -1,5 +1,6 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
+import { Offer } from 'src/modules/investor/offer/schemas/offer.schema';
 
 export enum PaymentStatus {
   PENDING = 'pending',
@@ -17,7 +18,7 @@ export class ContractPayment extends Document {
   @Prop({ type: Types.ObjectId, ref: 'User' })
   readonly user?: Types.ObjectId;
 
-  @Prop({ type: Types.ObjectId, ref: 'Contract', required: true })
+  @Prop({ type: Types.ObjectId, ref: Offer.name, required: true })
   readonly contract: Types.ObjectId;
 
   @Prop({ required: true })
