@@ -11,10 +11,10 @@ import { Auth } from 'src/core/decorators/auth.decorator';
 import { Public } from 'src/core/decorators/public.decorator';
 import { UserReal } from 'src/core/decorators/user.decorators';
 import { PaymentQueryDto } from './dtos/payment-query.dto';
-import { PayHereCheckoutDto } from './dtos/payhere-checkout.dto';
 import { PayHereNotifyDto } from './dtos/payhere-notify.dto';
 import { RefundPaymentDto } from './dtos/refund-payment.dto';
 import { PaymentsService } from './payments.service';
+import { PayHereCheckoutResponseI } from './payments.types';
 
 @Controller({ path: 'payments', version: '1' })
 @Auth()
@@ -42,9 +42,12 @@ export class PaymentsController {
     return this.paymentsService.findAll(query, { contract: contractId });
   }
 
-  @Post('checkout')
-  checkout(@Body() dto: PayHereCheckoutDto, @UserReal('user') userId: string) {
-    return this.paymentsService.createCheckoutSession(dto, userId);
+  @Post('checkout/:paymentId')
+  checkout(
+    @Param('paymentId') paymentId: string,
+    @UserReal('user') userId: string,
+  ): Promise<PayHereCheckoutResponseI> {
+    return this.paymentsService.createCheckoutSession(paymentId, userId);
   }
 
   @Public()

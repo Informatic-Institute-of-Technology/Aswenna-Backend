@@ -8,7 +8,6 @@ import { InjectModel } from '@nestjs/mongoose';
 import { FilterQuery, Model, Types } from 'mongoose';
 import { PaginatedResponseType } from 'src/common/interfaces/response.types';
 import { PaymentQueryDto } from './dtos/payment-query.dto';
-import { PayHereCheckoutDto } from './dtos/payhere-checkout.dto';
 import { PayHereNotifyDto } from './dtos/payhere-notify.dto';
 import { RefundPaymentDto } from './dtos/refund-payment.dto';
 import {
@@ -114,10 +113,10 @@ export class PaymentsService {
     return payment;
   }
 
-  async findByContractId(contractId: Types.ObjectId): Promise<ContractPayment[]> {
-    return this.paymentModel
-      .find({ contract: contractId })
-      .exec();
+  async findByContractId(
+    contractId: Types.ObjectId,
+  ): Promise<ContractPayment[]> {
+    return this.paymentModel.find({ contract: contractId }).exec();
   }
 
   async deleteById(id: string): Promise<{ deleted: true }> {
@@ -133,7 +132,7 @@ export class PaymentsService {
   }
 
   async createCheckoutSession(
-    dto: PayHereCheckoutDto,
+    paymentId: string,
     userId?: string,
   ): Promise<PayHereCheckoutResponseI> {
     const merchantId =
@@ -149,50 +148,46 @@ export class PaymentsService {
 
     const currency =
       this.configService.get<string>('payhere.currency') || 'LKR';
-    const notifyUrl =
-      dto.notifyUrl ||
-      this.configService.get<string>('payhere.notifyUrl') ||
-      '';
-    const returnUrl =
-      dto.returnUrl ||
-      this.configService.get<string>('payhere.returnUrl') ||
-      '';
-    const cancelUrl =
-      dto.cancelUrl ||
-      this.configService.get<string>('payhere.cancelUrl') ||
-      '';
+    const notifyUrl = this.configService.get<string>('payhere.notifyUrl') || '';
+    const returnUrl = this.configService.get<string>('payhere.returnUrl') || '';
+    const cancelUrl = this.configService.get<string>('payhere.cancelUrl') || '';
 
-    let payment: ContractPayment | null = null;
-
-    if (dto.paymentId) {
-      payment = await this.paymentModel
-        .findById(this.asObjectId(dto.paymentId, 'payment'))
-        .exec();
-    } else {
-      if (!dto.contract || dto.amount === undefined) {
-        throw new BadRequestException(
-          'paymentId or both contract and amount are required',
-        );
-      }
-
-      payment = await this.paymentModel.create({
-        contract: this.asObjectId(dto.contract, 'contract'),
-        amount: dto.amount,
-        dueDate: new Date(),
-        status: PaymentStatus.PENDING,
-        description: dto.description || dto.items || 'PayHere checkout payment',
-        user:
-          userId && Types.ObjectId.isValid(userId)
-            ? new Types.ObjectId(userId)
-            : undefined,
-        createdBy: userId || 'system',
-        updatedBy: userId || 'system',
-      });
-    }
+    const payment = await this.paymentModel
+      .findById(this.asObjectId(paymentId, 'payment'))
+      .populate([
+        { path: 'contract', select: 'projectName' },
+        {
+          path: 'user',
+          select:
+            'fullName email phoneNumber personalInfo.address personalInfo.city',
+        },
+      ])
+      .exec();
 
     if (!payment) {
       throw new NotFoundException('Payment not found');
     }
+
+    const userLike = payment.user as
+      | {
+          fullName?: string;
+          email?: string;
+          phoneNumber?: string;
+          personalInfo?: { address?: string; city?: string };
+        }
+      | undefined;
+
+    if (!userLike?.email) {
+      throw new BadRequestException(
+        'Payment user must include an email to create checkout session',
+      );
+    }
+
+    const contractLike = payment.contract as
+      | { projectName?: string }
+      | undefined;
+    const [firstName, ...rest] = (userLike.fullName || '').trim().split(' ');
+    const lastName = rest.join(' ').trim();
 
     const orderId =
       payment.orderId || this.generateOrderId(payment._id.toString());
@@ -211,16 +206,17 @@ export class PaymentsService {
       cancel_url: cancelUrl,
       notify_url: notifyUrl,
       order_id: orderId,
-      items: dto.items || payment.description || 'Contract Payment',
+      items:
+        contractLike?.projectName || payment.description || 'Contract Payment',
       currency,
       amount,
-      first_name: dto.firstName,
-      last_name: dto.lastName,
-      email: dto.email,
-      phone: dto.phone || '',
-      address: dto.address || '',
-      city: dto.city || '',
-      country: dto.country || 'Sri Lanka',
+      first_name: firstName || 'User',
+      last_name: lastName || 'Aswenna',
+      email: userLike.email,
+      phone: userLike.phoneNumber || '',
+      address: userLike.personalInfo?.address || '',
+      city: userLike.personalInfo?.city || '',
+      country: 'Sri Lanka',
       custom_1: payment._id.toString(),
       custom_2: payment.contract?.toString() || '',
       hash,
