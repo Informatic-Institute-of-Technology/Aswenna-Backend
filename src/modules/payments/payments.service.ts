@@ -73,7 +73,7 @@ export class PaymentsService {
         .skip((page - 1) * limit)
         .limit(limit)
         .populate([
-          { path: 'contract', select: 'projectName type status' },
+          { path: 'contract' },
           { path: 'user', select: 'fullName email phone' },
         ])
         .exec(),
@@ -101,7 +101,7 @@ export class PaymentsService {
     const payment = await this.paymentModel
       .findById(this.asObjectId(id, 'payment'))
       .populate([
-        { path: 'contract', select: 'projectName type status' },
+        { path: 'contract' },
         { path: 'user', select: 'fullName email phone' },
       ])
       .exec();
