@@ -108,17 +108,17 @@ export class RequestService {
     const page = query.page ?? 1;
     const limit = query.limit ?? 10;
 
-    const filter: FilterQuery<UserRequest> = {
+    const filter: Record<string, unknown> = {
       $or: [
         { recipient: new Types.ObjectId(userId) },
         { receiver: new Types.ObjectId(userId) },
       ],
     };
 
-    if (query.recipient) filter.recipient = new Types.ObjectId(query.recipient);
-    if (query.receiver) filter.receiver = new Types.ObjectId(query.receiver);
-    if (query.status) filter.status = query.status;
-    if (query.agreementPending) filter.investorAgreement = { $exists: false };
+    if (query.recipient) filter['recipient'] = new Types.ObjectId(query.recipient);
+    if (query.receiver) filter['receiver'] = new Types.ObjectId(query.receiver);
+    if (query.status) filter['status'] = query.status;
+    if (query.agreementPending) filter['investorAgreement'] = { $exists: false };
 
     const [data, totalDocs] = await Promise.all([
       this.requestModel

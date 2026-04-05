@@ -28,28 +28,28 @@ export enum JourneyStepActionType {
 @Schema({ _id: false })
 export class RequestCostBreakdownItem {
   @Prop({ required: true })
-  readonly title: string;
+  title: string;
 
   @Prop({ required: true })
-  readonly estimatedCost!: number;
+  estimatedCost: number;
 }
 
 @Schema({ _id: false })
 export class RequestMilestoneBreakdownItem {
   @Prop({ required: true })
-  readonly title: string;
+  title: string;
 
   @Prop({ required: true })
-  readonly estimatedAmount!: number;
+  estimatedAmount: number;
 
   @Prop({ required: true })
-  readonly paymentOverDueDate!: Date;
+  paymentOverDueDate: Date;
 
   @Prop({ required: true })
-  readonly startDate!: Date;
+  startDate: Date;
 
   @Prop({ required: true })
-  readonly endDate!: Date;
+  endDate: Date;
 }
 
 @Schema()
@@ -57,26 +57,26 @@ export class RequestJourneyStep extends Document {
   declare readonly _id: Types.ObjectId;
 
   @Prop({ required: true })
-  readonly title: string;
+  title: string;
 
   @Prop({ required: true })
-  readonly description: string;
+  description: string;
 
   @Prop({ type: Date })
-  readonly timestamp?: Date;
+  timestamp?: Date;
 
   @Prop({
     type: String,
     enum: JourneyStepStatus,
     default: JourneyStepStatus.PENDING,
   })
-  readonly status: JourneyStepStatus;
+  status: JourneyStepStatus;
 
   @Prop()
-  readonly icon?: string;
+  icon?: string;
 
   @Prop({ type: String, enum: JourneyStepActionType })
-  readonly actionType?: JourneyStepActionType;
+  actionType?: JourneyStepActionType;
 }
 
 @Schema({ timestamps: true })
@@ -84,46 +84,46 @@ export class UserRequest extends Document {
   declare readonly _id: Types.ObjectId;
 
   @Prop({ type: Types.ObjectId, ref: User.name, required: true })
-  readonly recipient: User;
+  recipient: User;
 
   @Prop({ type: Types.ObjectId, ref: User.name, required: true })
-  readonly receiver: User;
+  receiver: User;
 
   @Prop({ type: Types.ObjectId, ref: Offer.name })
-  readonly investorOffer?: Offer;
+  investorOffer?: Offer;
 
   @Prop({ type: Types.ObjectId, ref: LandOwnerAd.name })
-  readonly landOwnerAd?: LandOwnerAd;
+  landOwnerAd?: LandOwnerAd;
 
   @Prop({ type: Types.ObjectId, ref: FarmerProject.name })
-  readonly farmerProject?: FarmerProject;
+  farmerProject?: FarmerProject;
 
   @Prop({ type: String, enum: RequestStatus, default: RequestStatus.PENDING })
-  readonly status: RequestStatus;
+  status: RequestStatus;
 
   @Prop({ required: true })
-  readonly description: string;
+  description: string;
 
   @Prop([RequestCostBreakdownItem])
-  readonly costBreakdown!: RequestCostBreakdownItem[];
+  costBreakdown: RequestCostBreakdownItem[];
 
   @Prop([RequestMilestoneBreakdownItem])
-  readonly milestoneBreakdown!: RequestMilestoneBreakdownItem[];
+  milestoneBreakdown: RequestMilestoneBreakdownItem[];
 
   @Prop({ type: [RequestJourneyStep], default: [] })
-  readonly journeySteps: RequestJourneyStep[];
+  journeySteps: RequestJourneyStep[];
 
   @Prop(File)
   investorAgreement?: File;
 
   @Prop({ default: 'system' })
-  readonly createdBy: string;
+  createdBy: string;
 
   @Prop(Date)
   readonly createdAt: Date;
 
   @Prop({ default: 'system' })
-  readonly updatedBy: string;
+  updatedBy: string;
 
   @Prop(Date)
   readonly updatedAt: Date;
