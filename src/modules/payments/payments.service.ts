@@ -16,7 +16,7 @@ import {
   PaymentFilterI,
 } from './payments.types';
 import { ContractPayment, PaymentStatus } from './schemas/payment.schema';
-import { createHash } from 'crypto';
+import { createHash } from 'node:crypto';
 
 @Injectable()
 export class PaymentsService {
