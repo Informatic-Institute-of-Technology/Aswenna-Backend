@@ -7,87 +7,67 @@ import {
   Patch,
   Post,
   Query,
+  UploadedFile,
+  UseInterceptors,
 } from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { RequestService } from './request.service';
-import { UserReal } from 'src/core/decorators/user.decorators';
-import { RequestCreateDto } from './dtos/request.create.dto';
 import { Auth } from 'src/core/decorators/auth.decorator';
+import { UserReal } from 'src/core/decorators/user.decorators';
+import { LEGACY_UPLOAD_MULTER_OPTIONS } from 'src/common/constants/upload.constants';
+import { FarmerRequestOfferCreateDto } from './dtos/farmer-request-offer.create.dto';
 import { RequestQueryDto } from './dtos/request.query.dto';
-import {
-  AddJourneyStepDto,
-  OverwriteJourneyStepsDto,
-  RequestUpdateDto,
-  UpdateJourneyStepDto,
-} from './dtos/request.update.dto';
+import { UpdateJourneyStepDto } from './dtos/request.update.dto';
 
 @Controller({ path: 'request', version: '1' })
 @Auth()
 export class RequestController {
   constructor(private readonly requestService: RequestService) {}
 
+  @Post('farmer/offer')
+  farmerRequestOffer(
+    @UserReal() user: UserReal,
+    @Body() dto: FarmerRequestOfferCreateDto,
+  ) {
+    return this.requestService.farmerRequestOffer(user.user, dto);
+  }
+
   @Get()
-  getAllRequests(@UserReal() user: UserReal, @Query() query: RequestQueryDto) {
-    return this.requestService.findAllForUser(user.user, query);
+  findAll(@UserReal() user: UserReal, @Query() query: RequestQueryDto) {
+    return this.requestService.findAll(user.user, query);
   }
 
-  @Get(':id')
-  getRequestById(@UserReal() user: UserReal, @Param('id') id: string) {
-    return this.requestService.findByIdForUser(id, user.user);
-  }
-
-  @Post()
-  createRequest(@Body() dto: RequestCreateDto) {
-    return this.requestService.createRequest(dto);
-  }
-
-  @Patch(':id')
-  updateRequest(
-    @UserReal() user: UserReal,
-    @Param('id') id: string,
-    @Body() dto: RequestUpdateDto,
-  ) {
-    return this.requestService.updateForUser(id, user.user, dto);
-  }
-
-  @Delete(':id')
-  deleteRequest(@UserReal() user: UserReal, @Param('id') id: string) {
-    return this.requestService.deleteForUser(id, user.user);
-  }
-
-  @Post(':id/journey-steps')
-  addJourneyStep(
-    @UserReal() user: UserReal,
-    @Param('id') id: string,
-    @Body() dto: AddJourneyStepDto,
-  ) {
-    return this.requestService.addJourneyStep(id, user.user, dto);
-  }
-
-  @Patch(':id/journey-steps/:stepId')
+  @Patch(':requestId/journey-steps/:stepId')
   updateJourneyStep(
     @UserReal() user: UserReal,
-    @Param('id') id: string,
+    @Param('requestId') requestId: string,
     @Param('stepId') stepId: string,
     @Body() dto: UpdateJourneyStepDto,
   ) {
-    return this.requestService.updateJourneyStep(id, stepId, user.user, dto);
+    return this.requestService.updateJourneyStep(
+      requestId,
+      stepId,
+      user.user,
+      dto,
+    );
   }
 
-  @Delete(':id/journey-steps/:stepId')
-  removeJourneyStep(
+  @Post(':requestId/investor-agreement')
+  @UseInterceptors(FileInterceptor('file', LEGACY_UPLOAD_MULTER_OPTIONS))
+  uploadInvestorAgreement(
     @UserReal() user: UserReal,
-    @Param('id') id: string,
-    @Param('stepId') stepId: string,
+    @Param('requestId') requestId: string,
+    @UploadedFile() file: Express.Multer.File,
   ) {
-    return this.requestService.removeJourneyStep(id, stepId, user.user);
+    return this.requestService.uploadInvestorAgreement(
+      requestId,
+      user.user,
+      file,
+    );
   }
 
-  @Patch(':id/journey-steps')
-  overwriteJourneySteps(
-    @UserReal() user: UserReal,
-    @Param('id') id: string,
-    @Body() dto: OverwriteJourneyStepsDto,
-  ) {
-    return this.requestService.overwriteJourneySteps(id, user.user, dto);
+  @Delete(':requestId')
+  delete(@UserReal() user: UserReal, @Param('requestId') requestId: string) {
+    return this.requestService.delete(requestId, user.user);
   }
 }

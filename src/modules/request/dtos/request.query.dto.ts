@@ -1,23 +1,9 @@
-import {
-  IsIn,
-  IsMongoId,
-  IsNotEmpty,
-  IsOptional,
-  IsString,
-} from 'class-validator';
+import { Transform } from 'class-transformer';
+import { IsBoolean, IsEnum, IsMongoId, IsOptional } from 'class-validator';
 import { PaginationDto } from 'src/common/dtos/pagination.dto';
-import { RequestTargetType } from '../schemas/request.schema';
+import { RequestStatus } from '../schemas/request.schema';
 
 export class RequestQueryDto extends PaginationDto {
-  @IsOptional()
-  @IsString()
-  @IsIn(Object.values(RequestTargetType))
-  targetType?: RequestTargetType;
-
-  @IsOptional()
-  @IsMongoId()
-  target?: string;
-
   @IsOptional()
   @IsMongoId()
   recipient?: string;
@@ -27,12 +13,15 @@ export class RequestQueryDto extends PaginationDto {
   receiver?: string;
 
   @IsOptional()
-  @IsString()
-  status?: string;
-}
+  @IsEnum(RequestStatus)
+  status?: RequestStatus;
 
-export class RequestParamsDto {
-  @IsMongoId()
-  @IsNotEmpty()
-  readonly id: string;
+  /**
+   * When true, returns only requests where the investor agreement has not been uploaded yet.
+   * Useful for investors to see which requests still need their agreement file.
+   */
+  @IsOptional()
+  @IsBoolean()
+  @Transform(({ value }) => value === 'true' || value === true)
+  agreementPending?: boolean;
 }

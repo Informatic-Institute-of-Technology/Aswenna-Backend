@@ -1,5 +1,11 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
+import { File } from 'src/common/schemas/file.schema';
+import { FarmerProject } from 'src/modules/farmer/schemas/farmer-project.schema';
+import { Offer } from 'src/modules/investor/offer/schemas/offer.schema';
+import { LandOwnerAd } from 'src/modules/land-owner/land-ads/schemas/land-owner-ad.schema';
+import { User } from 'src/modules/user/schemas/user.schema';
+
 export enum RequestStatus {
   PENDING = 'pending',
   APPROVED = 'approved',
@@ -8,106 +14,125 @@ export enum RequestStatus {
   COMPLETED = 'completed',
 }
 
-export enum RequestTargetType {
-  OFFER = 'offer',
-  LAND_ADS = 'land ads',
-  PROJECT = 'project',
+export enum JourneyStepStatus {
+  COMPLETED = 'completed',
+  ACTIVE = 'active',
+  PENDING = 'pending',
+}
+
+export enum JourneyStepActionType {
+  UPLOAD_AGREEMENT = 'upload_agreement',
+  SIGN_AGREEMENT = 'sign_agreement',
 }
 
 @Schema({ _id: false })
-export class RequestStatusBadge {
-  @Prop({ type: String, required: true })
-  label: string;
+export class RequestCostBreakdownItem {
+  @Prop({ required: true })
+  readonly title: string;
 
-  @Prop({ type: String, required: true })
-  variant: string;
-
-  @Prop({ type: String, required: true })
-  color: string;
+  @Prop({ required: true })
+  readonly estimatedCost!: number;
 }
 
 @Schema({ _id: false })
-export class RequestTag {
-  @Prop({ type: String, required: true })
-  label: string;
+export class RequestMilestoneBreakdownItem {
+  @Prop({ required: true })
+  readonly title: string;
 
-  @Prop({ type: String, required: true })
-  variant: string;
+  @Prop({ required: true })
+  readonly estimatedAmount!: number;
+
+  @Prop({ required: true })
+  readonly paymentOverDueDate!: Date;
+
+  @Prop({ required: true })
+  readonly startDate!: Date;
+
+  @Prop({ required: true })
+  readonly endDate!: Date;
 }
 
 @Schema()
 export class RequestJourneyStep extends Document {
   declare readonly _id: Types.ObjectId;
 
-  @Prop({ type: String, required: true })
-  title: string;
+  @Prop({ required: true })
+  readonly title: string;
 
-  @Prop({ type: String, required: true })
-  description: string;
+  @Prop({ required: true })
+  readonly description: string;
 
-  @Prop({ type: String })
-  timestamp?: string;
+  @Prop({ type: Date })
+  readonly timestamp?: Date;
 
-  @Prop({ type: String, required: true })
-  status: string;
+  @Prop({
+    type: String,
+    enum: JourneyStepStatus,
+    default: JourneyStepStatus.PENDING,
+  })
+  readonly status: JourneyStepStatus;
 
-  @Prop({ type: String, required: true })
-  icon: string;
+  @Prop()
+  readonly icon?: string;
+
+  @Prop({ type: String, enum: JourneyStepActionType })
+  readonly actionType?: JourneyStepActionType;
 }
 
 @Schema({ timestamps: true })
 export class UserRequest extends Document {
   declare readonly _id: Types.ObjectId;
 
-  @Prop({ type: Types.ObjectId, required: true })
-  target: Types.ObjectId;
+  @Prop({ type: Types.ObjectId, ref: User.name, required: true })
+  readonly recipient: User;
 
-  @Prop({ type: String, enum: RequestTargetType, required: true })
-  targetType: RequestTargetType;
+  @Prop({ type: Types.ObjectId, ref: User.name, required: true })
+  readonly receiver: User;
 
-  @Prop({ type: Types.ObjectId, required: true })
-  recipient: Types.ObjectId;
+  @Prop({ type: Types.ObjectId, ref: Offer.name })
+  readonly investorOffer?: Offer;
 
-  @Prop({ type: Types.ObjectId, required: true })
-  receiver: Types.ObjectId;
+  @Prop({ type: Types.ObjectId, ref: LandOwnerAd.name })
+  readonly landOwnerAd?: LandOwnerAd;
+
+  @Prop({ type: Types.ObjectId, ref: FarmerProject.name })
+  readonly farmerProject?: FarmerProject;
 
   @Prop({ type: String, enum: RequestStatus, default: RequestStatus.PENDING })
-  status: RequestStatus;
+  readonly status: RequestStatus;
 
-  @Prop({ type: RequestStatusBadge, required: true })
-  statusBadge: RequestStatusBadge;
+  @Prop({ required: true })
+  readonly description: string;
 
-  @Prop({ type: [RequestTag], default: [] })
-  tags: RequestTag[];
+  @Prop([RequestCostBreakdownItem])
+  readonly costBreakdown!: RequestCostBreakdownItem[];
 
-  @Prop({ type: String, required: true })
-  description: string;
-
-  @Prop({ type: String })
-  investmentAmount?: string;
+  @Prop([RequestMilestoneBreakdownItem])
+  readonly milestoneBreakdown!: RequestMilestoneBreakdownItem[];
 
   @Prop({ type: [RequestJourneyStep], default: [] })
-  journeySteps: RequestJourneyStep[];
+  readonly journeySteps: RequestJourneyStep[];
 
-  @Prop({ type: String })
-  insight?: string;
+  @Prop(File)
+  investorAgreement?: File;
 
-  @Prop({ type: Date })
-  timestamp?: Date;
-
-  @Prop({ type: Boolean, default: false })
-  highlighted: boolean;
+  @Prop({ default: 'system' })
+  readonly createdBy: string;
 
   @Prop(Date)
-  createdAt: Date;
+  readonly createdAt: Date;
+
+  @Prop({ default: 'system' })
+  readonly updatedBy: string;
 
   @Prop(Date)
-  updatedAt: Date;
+  readonly updatedAt: Date;
 }
 
 export const UserRequestSchema = SchemaFactory.createForClass(UserRequest);
 
 UserRequestSchema.index({ recipient: 1, status: 1 });
 UserRequestSchema.index({ receiver: 1, status: 1 });
-UserRequestSchema.index({ target: 1, targetType: 1 });
+UserRequestSchema.index({ investorOffer: 1 });
+UserRequestSchema.index({ farmerProject: 1 });
 UserRequestSchema.index({ createdAt: -1 });

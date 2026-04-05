@@ -7,23 +7,101 @@ import {
 import { InjectModel } from '@nestjs/mongoose';
 import { FilterQuery, Model, Types } from 'mongoose';
 import { PaginatedResponseType } from 'src/common/interfaces/response.types';
-import { RequestCreateDto } from './dtos/request.create.dto';
+import { AzureBlobStorageService } from 'src/config/azure/services/azure-blob-storage.service';
+import { ContractsService } from 'src/modules/contracts/contracts.service';
+import { Offer } from 'src/modules/investor/offer/schemas/offer.schema';
+import { FarmerRequestOfferCreateDto } from './dtos/farmer-request-offer.create.dto';
 import { RequestQueryDto } from './dtos/request.query.dto';
+import { UpdateJourneyStepDto } from './dtos/request.update.dto';
 import {
-  OverwriteJourneyStepsDto,
-  RequestUpdateDto,
-  UpdateJourneyStepDto,
-} from './dtos/request.update.dto';
-import { UserRequest } from './schemas/request.schema';
+  JourneyStepActionType,
+  JourneyStepStatus,
+  UserRequest,
+} from './schemas/request.schema';
 
 @Injectable()
 export class RequestService {
   constructor(
     @InjectModel(UserRequest.name)
     private readonly requestModel: Model<UserRequest>,
+    @InjectModel(Offer.name)
+    private readonly offerModel: Model<Offer>,
+    private readonly contractsService: ContractsService,
+    private readonly azureBlobService: AzureBlobStorageService,
   ) {}
 
-  async findAllForUser(
+  async farmerRequestOffer(
+    farmerId: string,
+    dto: FarmerRequestOfferCreateDto,
+  ): Promise<UserRequest> {
+    const offer = await this.offerModel
+      .findById(dto.investorOffer)
+      .select('investor')
+      .lean();
+
+    if (!offer) throw new NotFoundException('Investor offer not found');
+
+    const investorId =
+      (offer.investor as any)._id?.toString() ?? offer.investor.toString();
+
+    if (investorId === farmerId) {
+      throw new BadRequestException('You cannot request your own offer');
+    }
+
+    const journeySteps = [
+      {
+        title: 'Farmer Requested Investment',
+        description: 'Farmer submitted investment request',
+        status: JourneyStepStatus.COMPLETED,
+      },
+      {
+        title: 'Investor Review',
+        description: 'Waiting for investor to review the request',
+        status: JourneyStepStatus.PENDING,
+      },
+      {
+        title: 'Investor Accepted Connection',
+        description: "Investor accepted farmer's request",
+        status: JourneyStepStatus.PENDING,
+      },
+      {
+        title: 'Investor Agreement Upload',
+        description: 'Waiting for investor signed agreement',
+        status: JourneyStepStatus.PENDING,
+        actionType: JourneyStepActionType.UPLOAD_AGREEMENT,
+      },
+      {
+        title: 'Farmer Approval',
+        description: 'Pending investor project start approval',
+        status: JourneyStepStatus.PENDING,
+        actionType: JourneyStepActionType.SIGN_AGREEMENT,
+      },
+      {
+        title: 'Project Started',
+        description: 'Cultivation begins',
+        status: JourneyStepStatus.PENDING,
+      },
+    ];
+
+    return this.requestModel.create({
+      recipient: new Types.ObjectId(farmerId),
+      receiver: new Types.ObjectId(investorId),
+      investorOffer: new Types.ObjectId(dto.investorOffer),
+      description: dto.description,
+      costBreakdown: dto.costBreakdown,
+      milestoneBreakdown: dto.milestoneBreakdown.map((m) => ({
+        ...m,
+        paymentOverDueDate: new Date(m.paymentOverDueDate),
+        startDate: new Date(m.startDate),
+        endDate: new Date(m.endDate),
+      })),
+      journeySteps,
+      createdBy: farmerId,
+      updatedBy: farmerId,
+    });
+  }
+
+  async findAll(
     userId: string,
     query: RequestQueryDto,
   ): Promise<PaginatedResponseType<UserRequest[]>> {
@@ -37,31 +115,10 @@ export class RequestService {
       ],
     };
 
-    if (query.targetType) filter.targetType = query.targetType;
-    if (query.target) filter.target = new Types.ObjectId(query.target);
+    if (query.recipient) filter.recipient = new Types.ObjectId(query.recipient);
+    if (query.receiver) filter.receiver = new Types.ObjectId(query.receiver);
     if (query.status) filter.status = query.status;
-
-    if (query.recipient || query.receiver) {
-      const recipientFilter = query.recipient
-        ? new Types.ObjectId(query.recipient)
-        : undefined;
-      const receiverFilter = query.receiver
-        ? new Types.ObjectId(query.receiver)
-        : undefined;
-
-      const requestedSelf =
-        recipientFilter?.toString() === userId ||
-        receiverFilter?.toString() === userId;
-
-      if (!requestedSelf) {
-        throw new ForbiddenException(
-          'You can only filter by recipient/receiver when one is your own user id',
-        );
-      }
-
-      if (recipientFilter) filter.recipient = recipientFilter;
-      if (receiverFilter) filter.receiver = receiverFilter;
-    }
+    if (query.agreementPending) filter.investorAgreement = { $exists: false };
 
     const [data, totalDocs] = await Promise.all([
       this.requestModel
@@ -90,147 +147,125 @@ export class RequestService {
     };
   }
 
-  async findByIdForUser(id: string, userId: string): Promise<UserRequest> {
-    const request = await this.requestModel.findById(id);
-    if (!request) throw new NotFoundException('Request not found');
-
-    this.assertUserCanAccess(request, userId);
-    return request;
-  }
-
-  async createRequest(dto: RequestCreateDto): Promise<UserRequest> {
-    this.ensureRecipientOrReceiverRole(dto.recipient, dto.receiver);
-
-    return this.requestModel.create({
-      ...dto,
-      target: new Types.ObjectId(dto.target),
-      recipient: new Types.ObjectId(dto.recipient),
-      receiver: new Types.ObjectId(dto.receiver),
-      timestamp: dto.timestamp ? new Date(dto.timestamp) : undefined,
-      highlighted: dto.highlighted ?? false,
-    });
-  }
-
-  async updateForUser(
-    id: string,
-    userId: string,
-    dto: RequestUpdateDto,
-  ): Promise<UserRequest> {
-    const request = await this.requestModel.findById(id);
-    if (!request) throw new NotFoundException('Request not found');
-    this.assertUserCanAccess(request, userId);
-
-    if (dto.recipient || dto.receiver) {
-      this.ensureRecipientOrReceiverRole(
-        dto.recipient ?? request.recipient.toString(),
-        dto.receiver ?? request.receiver.toString(),
-      );
-    }
-
-    if (dto.target) request.target = new Types.ObjectId(dto.target);
-    if (dto.recipient) request.recipient = new Types.ObjectId(dto.recipient);
-    if (dto.receiver) request.receiver = new Types.ObjectId(dto.receiver);
-    if (dto.status !== undefined) request.status = dto.status;
-    if (dto.statusBadge) request.statusBadge = dto.statusBadge;
-    if (dto.tags) request.tags = dto.tags;
-    if (dto.description !== undefined) request.description = dto.description;
-    if (dto.timestamp !== undefined)
-      request.timestamp = new Date(dto.timestamp);
-    if (dto.investmentAmount !== undefined)
-      request.investmentAmount = dto.investmentAmount;
-    if (dto.insight !== undefined) request.insight = dto.insight;
-    if (dto.highlighted !== undefined) request.highlighted = dto.highlighted;
-
-    return request.save();
-  }
-
-  async deleteForUser(id: string, userId: string): Promise<{ deleted: true }> {
-    const request = await this.requestModel.findById(id);
-    if (!request) throw new NotFoundException('Request not found');
-    this.assertUserCanAccess(request, userId);
-
-    await this.requestModel.deleteOne({ _id: request._id });
-    return { deleted: true };
-  }
-
-  async addJourneyStep(
-    requestId: string,
-    userId: string,
-    dto: { step: any },
-  ): Promise<UserRequest> {
-    const request = await this.findByIdForUser(requestId, userId);
-    request.journeySteps.push(dto.step);
-    return request.save();
-  }
-
   async updateJourneyStep(
     requestId: string,
     stepId: string,
     userId: string,
     dto: UpdateJourneyStepDto,
   ): Promise<UserRequest> {
-    const request = await this.findByIdForUser(requestId, userId);
-    const step = request.journeySteps.find(
-      (item) => item._id.toString() === stepId,
-    );
+    const request = await this.requestModel.findById(requestId);
+    if (!request) throw new NotFoundException('Request not found');
 
+    this.assertAccess(request, userId);
+
+    const step = request.journeySteps.find((s) => s._id.toString() === stepId);
     if (!step) throw new NotFoundException('Journey step not found');
 
-    step.title = dto.step.title;
-    step.description = dto.step.description;
-    step.timestamp = dto.step.timestamp;
-    step.status = dto.step.status;
-    step.icon = dto.step.icon;
+    if (dto.title !== undefined) step.title = dto.title;
+    if (dto.description !== undefined) step.description = dto.description;
+    if (dto.status !== undefined) step.status = dto.status;
+    if (dto.icon !== undefined) step.icon = dto.icon;
 
-    return request.save();
-  }
+    const saved = await request.save();
 
-  async removeJourneyStep(
-    requestId: string,
-    stepId: string,
-    userId: string,
-  ): Promise<UserRequest> {
-    const request = await this.findByIdForUser(requestId, userId);
-    request.journeySteps = request.journeySteps.filter(
-      (item) => item._id.toString() !== stepId,
+    const allCompleted = saved.journeySteps.every(
+      (s) => s.status === JourneyStepStatus.COMPLETED,
     );
 
-    return request.save();
+    if (allCompleted && saved.investorOffer) {
+      await this.contractsService.createFromRequest({
+        requestId: saved._id.toString(),
+        investorOfferId: this.docId(saved.investorOffer),
+        farmerId: this.docId(saved.recipient),
+        investorId: this.docId(saved.receiver),
+      });
+    }
+
+    return saved;
   }
 
-  async overwriteJourneySteps(
+  async uploadInvestorAgreement(
     requestId: string,
-    userId: string,
-    dto: OverwriteJourneyStepsDto,
+    investorId: string,
+    file: Express.Multer.File,
   ): Promise<UserRequest> {
-    const request = await this.findByIdForUser(requestId, userId);
-    request.journeySteps = dto.journeySteps as any;
-    return request.save();
-  }
+    const request = await this.requestModel.findById(requestId);
+    if (!request) throw new NotFoundException('Request not found');
 
-  private assertUserCanAccess(request: UserRequest, userId: string): void {
-    const isRecipient = request.recipient.toString() === userId;
-    const isReceiver = request.receiver.toString() === userId;
-
-    if (!isRecipient && !isReceiver) {
+    if (this.docId(request.receiver) !== investorId) {
       throw new ForbiddenException(
-        'You can only access requests where you are recipient or receiver',
+        'Only the investor can upload the agreement',
       );
+    }
+
+    const uploaded = await this.azureBlobService.uploadFile(
+      file,
+      'investor-agreements',
+    );
+
+    request.investorAgreement = {
+      filename: file.originalname,
+      fileSize: String(file.size),
+      mimeType: file.mimetype,
+      url: uploaded.url,
+    } as any;
+
+    // Mark the agreement upload step completed and activate the next pending step
+    const agreementStep = request.journeySteps.find(
+      (s) => s.actionType === JourneyStepActionType.UPLOAD_AGREEMENT,
+    );
+    if (agreementStep) {
+      agreementStep.status = JourneyStepStatus.COMPLETED;
+      agreementStep.timestamp = new Date();
+
+      const nextStep = request.journeySteps.find(
+        (s) => s.status === JourneyStepStatus.PENDING,
+      );
+      if (nextStep) nextStep.status = JourneyStepStatus.ACTIVE;
+    }
+
+    const saved = await request.save();
+
+    const allCompleted = saved.journeySteps.every(
+      (s) => s.status === JourneyStepStatus.COMPLETED,
+    );
+
+    if (allCompleted && saved.investorOffer) {
+      await this.contractsService.createFromRequest({
+        requestId: saved._id.toString(),
+        investorOfferId: this.docId(saved.investorOffer),
+        farmerId: this.docId(saved.recipient),
+        investorId: this.docId(saved.receiver),
+      });
+    }
+
+    return saved;
+  }
+
+  async delete(requestId: string, userId: string): Promise<{ deleted: true }> {
+    const request = await this.requestModel.findById(requestId);
+    if (!request) throw new NotFoundException('Request not found');
+
+    this.assertAccess(request, userId);
+
+    await this.requestModel.deleteOne({ _id: request._id });
+    return { deleted: true };
+  }
+
+  private assertAccess(request: UserRequest, userId: string): void {
+    const isRecipient = this.docId(request.recipient) === userId;
+    const isReceiver = this.docId(request.receiver) === userId;
+    if (!isRecipient && !isReceiver) {
+      throw new ForbiddenException('You do not have access to this request');
     }
   }
 
-  private ensureRecipientOrReceiverRole(
-    recipient: string,
-    receiver: string,
-  ): void {
-    if (!recipient || !receiver) {
-      throw new BadRequestException('recipient and receiver are required');
-    }
-
-    if (recipient === receiver) {
-      throw new BadRequestException(
-        'recipient and receiver must be different users',
-      );
-    }
+  /** Extracts the string ID from a field that may be a populated Document or a raw ObjectId. */
+  private docId(ref: { _id?: unknown } | Types.ObjectId | string): string {
+    if (typeof ref === 'string') return ref;
+    if (ref instanceof Types.ObjectId) return ref.toHexString();
+    if (ref._id instanceof Types.ObjectId) return ref._id.toHexString();
+    if (typeof ref._id === 'string') return ref._id;
+    throw new Error('Unable to resolve document ID');
   }
 }
