@@ -1,259 +1,271 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model, Types } from 'mongoose';
-import { InteractionRequest } from './schemas/request.schema';
-import { RequestGateway } from './request.gateway';
-import { RequestCreateI } from './request.types';
+import { FilterQuery, Model, Types } from 'mongoose';
+import { PaginatedResponseType } from 'src/common/interfaces/response.types';
+import { AzureBlobStorageService } from 'src/config/azure/services/azure-blob-storage.service';
+import { ContractsService } from 'src/modules/contracts/contracts.service';
+import { Offer } from 'src/modules/investor/offer/schemas/offer.schema';
+import { FarmerRequestOfferCreateDto } from './dtos/farmer-request-offer.create.dto';
+import { RequestQueryDto } from './dtos/request.query.dto';
+import { UpdateJourneyStepDto } from './dtos/request.update.dto';
+import {
+  JourneyStepActionType,
+  JourneyStepStatus,
+  UserRequest,
+} from './schemas/request.schema';
 
 @Injectable()
 export class RequestService {
-  // private readonly validTransitions: Record<RequestStatus, RequestStatus[]> = {
-  //   [RequestStatus.PENDING]: [
-  //     RequestStatus.APPROVED,
-  //     RequestStatus.REJECTED,
-  //     RequestStatus.CANCELLED,
-  //   ],
-  //   [RequestStatus.APPROVED]: [],
-  //   [RequestStatus.REJECTED]: [],
-  //   [RequestStatus.CANCELLED]: [],
-  // };
-
   constructor(
-    @InjectModel(InteractionRequest.name)
-    private readonly requestModel: Model<InteractionRequest>,
-    private readonly requestGateway: RequestGateway,
+    @InjectModel(UserRequest.name)
+    private readonly requestModel: Model<UserRequest>,
+    @InjectModel(Offer.name)
+    private readonly offerModel: Model<Offer>,
+    private readonly contractsService: ContractsService,
+    private readonly azureBlobService: AzureBlobStorageService,
   ) {}
 
-  async createRequest(
-    sender: string,
-    request: RequestCreateI,
-  ): Promise<InteractionRequest> {
-    if (sender === request.receiver)
-      throw new BadRequestException('Cannot send request to yourself');
+  async farmerRequestOffer(
+    farmerId: string,
+    dto: FarmerRequestOfferCreateDto,
+  ): Promise<UserRequest> {
+    const offer = await this.offerModel
+      .findById(dto.investorOffer)
+      .select('investor')
+      .lean();
 
-    const createdRequest = await this.requestModel.create({
-      ...request,
-      receiver: new Types.ObjectId(request.receiver),
-      targetId: new Types.ObjectId(request.targetId),
-      sender: new Types.ObjectId(sender),
+    if (!offer) throw new NotFoundException('Investor offer not found');
+
+    const investorId =
+      (offer.investor as any)._id?.toString() ?? offer.investor.toString();
+
+    if (investorId === farmerId) {
+      throw new BadRequestException('You cannot request your own offer');
+    }
+
+    const journeySteps = [
+      {
+        title: 'Farmer Requested Investment',
+        description: 'Farmer submitted investment request',
+        status: JourneyStepStatus.COMPLETED,
+      },
+      {
+        title: 'Investor Review',
+        description: 'Waiting for investor to review the request',
+        status: JourneyStepStatus.PENDING,
+      },
+      {
+        title: 'Investor Accepted Connection',
+        description: "Investor accepted farmer's request",
+        status: JourneyStepStatus.PENDING,
+      },
+      {
+        title: 'Investor Agreement Upload',
+        description: 'Waiting for investor signed agreement',
+        status: JourneyStepStatus.PENDING,
+        actionType: JourneyStepActionType.UPLOAD_AGREEMENT,
+      },
+      {
+        title: 'Farmer Approval',
+        description: 'Pending investor project start approval',
+        status: JourneyStepStatus.PENDING,
+        actionType: JourneyStepActionType.SIGN_AGREEMENT,
+      },
+      {
+        title: 'Project Started',
+        description: 'Cultivation begins',
+        status: JourneyStepStatus.PENDING,
+      },
+    ];
+
+    return this.requestModel.create({
+      recipient: new Types.ObjectId(farmerId),
+      receiver: new Types.ObjectId(investorId),
+      investorOffer: new Types.ObjectId(dto.investorOffer),
+      description: dto.description,
+      costBreakdown: dto.costBreakdown,
+      milestoneBreakdown: dto.milestoneBreakdown.map((m) => ({
+        ...m,
+        paymentOverDueDate: new Date(m.paymentOverDueDate),
+        startDate: new Date(m.startDate),
+        endDate: new Date(m.endDate),
+      })),
+      journeySteps,
+      createdBy: farmerId,
+      updatedBy: farmerId,
     });
-
-    this.requestGateway.sendNewRequest(
-      createdRequest.receiver.toString(),
-      createdRequest,
-    );
-
-    return createdRequest;
   }
 
-  // async updateRequestStatus(
-  //   requestId: string,
-  //   responderId: string,
-  //   dto: UpdateRequestStatusDto,
-  // ): Promise<IRequestResponse> {
-  //   const request = await this.requestModel.findById(requestId);
+  async findAll(
+    userId: string,
+    query: RequestQueryDto,
+  ): Promise<PaginatedResponseType<UserRequest[]>> {
+    const page = query.page ?? 1;
+    const limit = query.limit ?? 10;
 
-  //   if (!request) {
-  //     throw new NotFoundException(`Request ${requestId} not found`);
-  //   }
+    const filter: Record<string, unknown> = {
+      $or: [
+        { recipient: new Types.ObjectId(userId) },
+        { receiver: new Types.ObjectId(userId) },
+      ],
+    };
 
-  //   // Verify receiver is updating the status
-  //   if (request.receiver.toString() !== responderId) {
-  //     throw new BadRequestException('Only receiver can approve/reject');
-  //   }
+    if (query.recipient) filter['recipient'] = new Types.ObjectId(query.recipient);
+    if (query.receiver) filter['receiver'] = new Types.ObjectId(query.receiver);
+    if (query.status) filter['status'] = query.status;
+    if (query.agreementPending) filter['investorAgreement'] = { $exists: false };
 
-  //   // Check if current status allows transition
-  //   const currentStatus = request.status;
-  //   const allowedTransitions = this.validTransitions[currentStatus];
+    const [data, totalDocs] = await Promise.all([
+      this.requestModel
+        .find(filter)
+        .sort({ createdAt: -1 })
+        .skip((page - 1) * limit)
+        .limit(limit)
+        .exec(),
+      this.requestModel.countDocuments(filter),
+    ]);
 
-  //   if (!allowedTransitions.includes(dto.status)) {
-  //     throw new BadRequestException(
-  //       `Cannot transition from ${currentStatus} to ${dto.status}`,
-  //     );
-  //   }
+    const totalPages = Math.ceil(totalDocs / limit);
 
-  //   // Update status
-  //   request.status = dto.status;
-  //   request.responseAt = new Date();
-  //   request.updatedAt = new Date();
+    return {
+      data,
+      pagination: {
+        hasNextPage: page < totalPages,
+        hasPrevPage: page > 1,
+        limit,
+        nextPage: page + 1,
+        page,
+        prevPage: page - 1,
+        totalDocs,
+        totalPages,
+      },
+    };
+  }
 
-  //   const updated = await request.save();
-  //   const response = this.formatResponse(updated);
+  async updateJourneyStep(
+    requestId: string,
+    stepId: string,
+    userId: string,
+    dto: UpdateJourneyStepDto,
+  ): Promise<UserRequest> {
+    const request = await this.requestModel.findById(requestId);
+    if (!request) throw new NotFoundException('Request not found');
 
-  //   // Send WebSocket notification to sender
-  //   this.sendStatusUpdateNotification(response);
+    this.assertAccess(request, userId);
 
-  //   return response;
-  // }
+    const step = request.journeySteps.find((s) => s._id.toString() === stepId);
+    if (!step) throw new NotFoundException('Journey step not found');
 
-  // async cancelRequest(
-  //   requestId: string,
-  //   senderId: string,
-  // ): Promise<IRequestResponse> {
-  //   const request = await this.requestModel.findById(requestId);
+    if (dto.title !== undefined) step.title = dto.title;
+    if (dto.description !== undefined) step.description = dto.description;
+    if (dto.status !== undefined) step.status = dto.status;
+    if (dto.icon !== undefined) step.icon = dto.icon;
 
-  //   if (!request) {
-  //     throw new NotFoundException(`Request ${requestId} not found`);
-  //   }
+    const saved = await request.save();
 
-  //   // Verify sender is cancelling the request
-  //   if (request.sender.toString() !== senderId) {
-  //     throw new BadRequestException('Only sender can cancel');
-  //   }
+    const allCompleted = saved.journeySteps.every(
+      (s) => s.status === JourneyStepStatus.COMPLETED,
+    );
 
-  //   // Check if request is still pending
-  //   if (request.status !== RequestStatus.PENDING) {
-  //     throw new BadRequestException(
-  //       `Cannot cancel request with status ${request.status}`,
-  //     );
-  //   }
+    if (allCompleted && saved.investorOffer) {
+      await this.contractsService.createFromRequest({
+        requestId: saved._id.toString(),
+        investorOfferId: this.docId(saved.investorOffer),
+        farmerId: this.docId(saved.recipient),
+        investorId: this.docId(saved.receiver),
+      });
+    }
 
-  //   request.status = RequestStatus.CANCELLED;
-  //   request.responseAt = new Date();
-  //   request.updatedAt = new Date();
+    return saved;
+  }
 
-  //   const updated = await request.save();
-  //   const response = this.formatResponse(updated);
+  async uploadInvestorAgreement(
+    requestId: string,
+    investorId: string,
+    file: Express.Multer.File,
+  ): Promise<UserRequest> {
+    const request = await this.requestModel.findById(requestId);
+    if (!request) throw new NotFoundException('Request not found');
 
-  //   this.requestGateway.sendNewRequest(response);
+    if (this.docId(request.receiver) !== investorId) {
+      throw new ForbiddenException(
+        'Only the investor can upload the agreement',
+      );
+    }
 
-  //   return response;
-  // }
+    const uploaded = await this.azureBlobService.uploadFile(
+      file,
+      'investor-agreements',
+    );
 
-  // async getReceiverRequests(
-  //   receiverId: string,
-  //   status?: RequestStatus,
-  //   page: number = 1,
-  //   limit: number = 10,
-  // ): Promise<{ data: IRequestResponse[]; total: number }> {
-  //   const query: any = {
-  //     receiver: new Types.ObjectId(receiverId),
-  //   };
+    request.investorAgreement = {
+      filename: file.originalname,
+      fileSize: String(file.size),
+      mimeType: file.mimetype,
+      url: uploaded.url,
+    } as any;
 
-  //   if (status) {
-  //     query.status = status;
-  //   }
+    // Mark the agreement upload step completed and activate the next pending step
+    const agreementStep = request.journeySteps.find(
+      (s) => s.actionType === JourneyStepActionType.UPLOAD_AGREEMENT,
+    );
+    if (agreementStep) {
+      agreementStep.status = JourneyStepStatus.COMPLETED;
+      agreementStep.timestamp = new Date();
 
-  //   const total = await this.requestModel.countDocuments(query);
-  //   const data = await this.requestModel
-  //     .find(query)
-  //     .sort({ createdAt: -1 })
-  //     .skip((page - 1) * limit)
-  //     .limit(limit);
+      const nextStep = request.journeySteps.find(
+        (s) => s.status === JourneyStepStatus.PENDING,
+      );
+      if (nextStep) nextStep.status = JourneyStepStatus.ACTIVE;
+    }
 
-  //   return {
-  //     data: data.map((req) => this.formatResponse(req)),
-  //     total,
-  //   };
-  // }
+    const saved = await request.save();
 
-  // async getSenderRequests(
-  //   senderId: string,
-  //   status?: RequestStatus,
-  //   page: number = 1,
-  //   limit: number = 10,
-  // ): Promise<{ data: IRequestResponse[]; total: number }> {
-  //   const query: any = {
-  //     sender: new Types.ObjectId(senderId),
-  //   };
+    const allCompleted = saved.journeySteps.every(
+      (s) => s.status === JourneyStepStatus.COMPLETED,
+    );
 
-  //   if (status) {
-  //     query.status = status;
-  //   }
+    if (allCompleted && saved.investorOffer) {
+      await this.contractsService.createFromRequest({
+        requestId: saved._id.toString(),
+        investorOfferId: this.docId(saved.investorOffer),
+        farmerId: this.docId(saved.recipient),
+        investorId: this.docId(saved.receiver),
+      });
+    }
 
-  //   const total = await this.requestModel.countDocuments(query);
-  //   const data = await this.requestModel
-  //     .find(query)
-  //     .sort({ createdAt: -1 })
-  //     .skip((page - 1) * limit)
-  //     .limit(limit);
+    return saved;
+  }
 
-  //   return {
-  //     data: data.map((req) => this.formatResponse(req)),
-  //     total,
-  //   };
-  // }
+  async delete(requestId: string, userId: string): Promise<{ deleted: true }> {
+    const request = await this.requestModel.findById(requestId);
+    if (!request) throw new NotFoundException('Request not found');
 
-  // async getRequestById(requestId: string): Promise<IRequestResponse> {
-  //   const request = await this.requestModel.findById(requestId);
+    this.assertAccess(request, userId);
 
-  //   if (!request) {
-  //     throw new NotFoundException(`Request ${requestId} not found`);
-  //   }
+    await this.requestModel.deleteOne({ _id: request._id });
+    return { deleted: true };
+  }
 
-  //   return this.formatResponse(request);
-  // }
+  private assertAccess(request: UserRequest, userId: string): void {
+    const isRecipient = this.docId(request.recipient) === userId;
+    const isReceiver = this.docId(request.receiver) === userId;
+    if (!isRecipient && !isReceiver) {
+      throw new ForbiddenException('You do not have access to this request');
+    }
+  }
 
-  // async getTargetRequests(
-  //   targetId: string,
-  //   targetType: RequestType,
-  // ): Promise<IRequestResponse[]> {
-  //   const requests = await this.requestModel.find({
-  //     target: new Types.ObjectId(targetId),
-  //     targetType,
-  //   });
-
-  //   return requests.map((req) => this.formatResponse(req));
-  // }
-
-  // private formatResponse(doc: InteractionRequest): IRequestResponse {
-  //   return {
-  //     _id: doc._id.toString(),
-  //     sender: doc.sender.toString(),
-  //     receiver: doc.receiver.toString(),
-  //     type: doc.type,
-  //     targetId: doc.target.toString(),
-  //     targetType: doc.targetType,
-  //     status: doc.status,
-  //     responseAt: doc.responseAt,
-  //     metadata: doc.metadata,
-  //     createdAt: doc.createdAt,
-  //     updatedAt: doc.updatedAt,
-  //   };
-  // }
-
-  // private sendNewRequestNotification(request: IRequestResponse) {
-  //   const payload: IWebSocketRequestEvent = {
-  //     requestId: request._id,
-  //     sender: request.sender,
-  //     receiver: request.receiver,
-  //     type: request.type,
-  //     targetId: request.targetId,
-  //     targetType: request.targetType,
-  //     status: request.status,
-  //     metadata: request.metadata,
-  //     timestamp: request.createdAt,
-  //   };
-  //   this.requestGateway.sendNewRequest(request.receiver, payload);
-  // }
-
-  // private sendStatusUpdateNotification(request: IRequestResponse) {
-  //   const payload: IWebSocketRequestEvent = {
-  //     requestId: request._id,
-  //     sender: request.sender,
-  //     receiver: request.receiver,
-  //     type: request.type,
-  //     targetId: request.targetId,
-  //     targetType: request.targetType,
-  //     status: request.status,
-  //     metadata: request.metadata,
-  //     timestamp: request.updatedAt,
-  //   };
-  //   this.requestGateway.sendStatusUpdate(request.sender, payload);
-  // }
-
-  // private sendCancellationNotification(request: IRequestResponse) {
-  //   const payload: IWebSocketRequestEvent = {
-  //     requestId: request._id,
-  //     sender: request.sender,
-  //     receiver: request.receiver,
-  //     type: request.type,
-  //     targetId: request.targetId,
-  //     targetType: request.targetType,
-  //     status: request.status,
-  //     metadata: request.metadata,
-  //     timestamp: request.updatedAt,
-  //   };
-  //   this.requestGateway.sendRequestCancelled(payload);
-  // }
+  /** Extracts the string ID from a field that may be a populated Document or a raw ObjectId. */
+  private docId(ref: { _id?: unknown } | Types.ObjectId | string): string {
+    if (typeof ref === 'string') return ref;
+    if (ref instanceof Types.ObjectId) return ref.toHexString();
+    if (ref._id instanceof Types.ObjectId) return ref._id.toHexString();
+    if (typeof ref._id === 'string') return ref._id;
+    throw new Error('Unable to resolve document ID');
+  }
 }

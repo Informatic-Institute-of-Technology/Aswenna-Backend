@@ -1,6 +1,9 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { Document, Types } from 'mongoose';
+import { File } from 'src/common/schemas/file.schema';
 import { Meta } from 'src/common/schemas/meta.schema';
+import { FarmerProject } from 'src/modules/farmer/schemas/farmer-project.schema';
+import { LandOwnerAd } from 'src/modules/land-owner/land-ads/schemas/land-owner-ad.schema';
 import { User } from 'src/modules/user/schemas/user.schema';
 
 export enum OfferType {
@@ -17,6 +20,7 @@ export enum FarmingMethod {
 export enum OfferStatus {
   PENDING = 'pending',
   ACTIVE = 'active',
+  OPEN = 'open',
   CLOSED = 'closed',
   EXPIRED = 'expired',
 }
@@ -81,6 +85,33 @@ export class CommissionDetails {
   preferredRegions: string[];
 }
 
+@Schema({ _id: false })
+export class OfferCostBreakdownItem {
+  @Prop({ required: true })
+  title: string;
+
+  @Prop({ required: true })
+  estimatedCost: number;
+}
+
+@Schema({ _id: false })
+export class OfferMilestoneBreakdownItem {
+  @Prop({ required: true })
+  title: string;
+
+  @Prop({ required: true })
+  estimatedAmount: number;
+
+  @Prop({ required: true })
+  paymentOverDueDate: Date;
+
+  @Prop({ required: true })
+  startDate: Date;
+
+  @Prop({ required: true })
+  endDate: Date;
+}
+
 @Schema({ timestamps: true })
 export class Offer extends Document {
   declare readonly _id: Types.ObjectId;
@@ -115,11 +146,35 @@ export class Offer extends Document {
   @Prop({ required: true, default: 0 })
   readonly applicationsCount: number;
 
+  @Prop({ type: Types.ObjectId, ref: User.name })
+  readonly farmer?: User;
+
+  @Prop({ type: Types.ObjectId, ref: FarmerProject.name })
+  readonly farmerProject?: FarmerProject;
+
+  @Prop(File)
+  readonly farmerAgreement?: File;
+
+  @Prop({ type: Types.ObjectId, ref: User.name })
+  readonly landowner?: User;
+
+  @Prop({ type: Types.ObjectId, ref: LandOwnerAd.name })
+  readonly landownerProject?: LandOwnerAd;
+
+  @Prop(File)
+  readonly landownerAgreement?: File;
+
   @Prop({ type: HarvestBaseDetails })
   readonly harvestBaseDetails?: HarvestBaseDetails;
 
   @Prop({ type: CommissionDetails })
   readonly commissionDetails?: CommissionDetails;
+
+  @Prop([OfferCostBreakdownItem])
+  readonly costBreakdown?: OfferCostBreakdownItem[];
+
+  @Prop([OfferMilestoneBreakdownItem])
+  readonly milestoneBreakdown?: OfferMilestoneBreakdownItem[];
 
   @Prop([Meta])
   readonly meta: Meta[];

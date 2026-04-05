@@ -8,6 +8,7 @@ import {
   Post,
   Query,
   UploadedFiles,
+  UseFilters,
   UseInterceptors,
 } from '@nestjs/common';
 import { AnyFilesInterceptor } from '@nestjs/platform-express';
@@ -17,8 +18,15 @@ import { UserEmailParamsDto, UserParamsDto } from './dtos/user.query.dto';
 import { RoleParamsDto } from '../role/dtos/role.query.dto';
 import { PaginationDto } from 'src/common/dtos/pagination.dto';
 import { UserUpdateDto } from './dtos/user.update.dto';
+import {
+  UserUploadCompleteDto,
+  UserUploadRequestDto,
+} from './dtos/user.upload.dto';
+import { LEGACY_UPLOAD_MULTER_OPTIONS } from 'src/common/constants/upload.constants';
+import { UploadLimitExceptionFilter } from 'src/common/filters/upload-limit-exception.filter';
 
 @Controller({ path: 'user', version: '1' })
+@UseFilters(UploadLimitExceptionFilter)
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
@@ -48,6 +56,22 @@ export class UserController {
     return this.userService.create(user);
   }
 
+  @Post(':user/upload-requests')
+  async createUploadRequests(
+    @Param() params: UserParamsDto,
+    @Body() body: UserUploadRequestDto,
+  ) {
+    return this.userService.createUploadRequests(params.user, body);
+  }
+
+  @Post(':user/upload-complete')
+  async completeUpload(
+    @Param() params: UserParamsDto,
+    @Body() body: UserUploadCompleteDto,
+  ) {
+    return this.userService.completeUpload(params.user, body);
+  }
+
   @Post(':user/role/:role')
   async assignRole(@Param() params: UserParamsDto & RoleParamsDto) {
     return this.userService.assignRole(params.user, params.role);
@@ -72,7 +96,7 @@ export class UserController {
   }
 
   @Post(':user/upload')
-  @UseInterceptors(AnyFilesInterceptor())
+  @UseInterceptors(AnyFilesInterceptor(LEGACY_UPLOAD_MULTER_OPTIONS))
   async uploadMultipleFiles(
     @Param() params: UserParamsDto,
     @UploadedFiles() files: any[],

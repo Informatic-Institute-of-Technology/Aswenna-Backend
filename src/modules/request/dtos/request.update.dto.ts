@@ -1,25 +1,22 @@
-import { IsEnum, IsNotEmpty, IsOptional } from 'class-validator';
-import { RequestStatus } from '../schemas/request.schema';
+import { IsEnum, IsNotEmpty, IsOptional, IsString } from 'class-validator';
+import { JourneyStepStatus } from '../schemas/request.schema';
 
-export class UpdateRequestStatusDto {
-  @IsEnum([
-    RequestStatus.APPROVED,
-    RequestStatus.REJECTED,
-    RequestStatus.CANCELLED,
-  ])
+export class UpdateJourneyStepDto {
+  @IsOptional()
+  @IsString()
   @IsNotEmpty()
-  readonly status: RequestStatus;
-}
-
-export class UpdateRequestDto {
-  @IsOptional()
-  @IsEnum([
-    RequestStatus.APPROVED,
-    RequestStatus.REJECTED,
-    RequestStatus.CANCELLED,
-  ])
-  readonly status?: RequestStatus;
+  title?: string;
 
   @IsOptional()
-  readonly metadata?: Record<string, any>;
+  @IsString()
+  @IsNotEmpty()
+  description?: string;
+
+  @IsOptional()
+  @IsEnum(JourneyStepStatus)
+  status?: JourneyStepStatus;
+
+  @IsOptional()
+  @IsString()
+  icon?: string;
 }

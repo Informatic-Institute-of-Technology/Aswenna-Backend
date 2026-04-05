@@ -1,21 +1,26 @@
 import { Module } from '@nestjs/common';
 import { MongooseModule } from '@nestjs/mongoose';
 import {
-  InteractionRequest,
-  InteractionRequestSchema,
-} from './schemas/request.schema';
+  Offer,
+  OfferSchema,
+} from 'src/modules/investor/offer/schemas/offer.schema';
+import { AzureConfigModule } from 'src/config/azure/azure.module';
+import { ContractsModule } from 'src/modules/contracts/contracts.module';
+import { UserRequest, UserRequestSchema } from './schemas/request.schema';
 import { RequestService } from './request.service';
 import { RequestController } from './request.controller';
-import { RequestGateway } from './request.gateway';
 
 @Module({
   imports: [
     MongooseModule.forFeature([
-      { name: InteractionRequest.name, schema: InteractionRequestSchema },
+      { name: UserRequest.name, schema: UserRequestSchema },
+      { name: Offer.name, schema: OfferSchema },
     ]),
+    AzureConfigModule,
+    ContractsModule,
   ],
-  providers: [RequestService, RequestGateway],
+  providers: [RequestService],
   controllers: [RequestController],
-  exports: [RequestService, RequestGateway],
+  exports: [RequestService],
 })
 export class RequestModule {}

@@ -1,94 +1,73 @@
-import { Body, Controller, Post } from '@nestjs/common';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  UploadedFile,
+  UseInterceptors,
+} from '@nestjs/common';
+import { FileInterceptor } from '@nestjs/platform-express';
 import { RequestService } from './request.service';
-import { UserReal } from 'src/core/decorators/user.decorators';
-import { RequestCreateDto } from './dtos/request.create.dto';
 import { Auth } from 'src/core/decorators/auth.decorator';
+import { UserReal } from 'src/core/decorators/user.decorators';
+import { LEGACY_UPLOAD_MULTER_OPTIONS } from 'src/common/constants/upload.constants';
+import { FarmerRequestOfferCreateDto } from './dtos/farmer-request-offer.create.dto';
+import { RequestQueryDto } from './dtos/request.query.dto';
+import { UpdateJourneyStepDto } from './dtos/request.update.dto';
 
 @Controller({ path: 'request', version: '1' })
 @Auth()
 export class RequestController {
-  constructor(private requestService: RequestService) {}
+  constructor(private readonly requestService: RequestService) {}
 
-  @Post()
-  async createRequest(
+  @Post('farmer/offer')
+  farmerRequestOffer(
     @UserReal() user: UserReal,
-    @Body() dto: RequestCreateDto,
+    @Body() dto: FarmerRequestOfferCreateDto,
   ) {
-    return this.requestService.createRequest(user.user, dto);
+    return this.requestService.farmerRequestOffer(user.user, dto);
   }
 
-  // /**
-  //  * Get requests received by the user
-  //  * GET /requests/inbox
-  //  */
-  // @Get('inbox')
-  // async getInboxRequests(
-  //   @UserReal() user: UserReal,
-  //   @Query() query: RequestQueryDto,
-  // ) {
-  //   const page = query.page ? parseInt(query.page.toString()) : 1;
-  //   const limit = query.limit ? parseInt(query.limit.toString()) : 10;
+  @Get()
+  findAll(@UserReal() user: UserReal, @Query() query: RequestQueryDto) {
+    return this.requestService.findAll(user.user, query);
+  }
 
-  //   return this.requestService.getReceiverRequests(
-  //     user.user,
-  //     query.status,
-  //     page,
-  //     limit,
-  //   );
-  // }
+  @Patch(':requestId/journey-steps/:stepId')
+  updateJourneyStep(
+    @UserReal() user: UserReal,
+    @Param('requestId') requestId: string,
+    @Param('stepId') stepId: string,
+    @Body() dto: UpdateJourneyStepDto,
+  ) {
+    return this.requestService.updateJourneyStep(
+      requestId,
+      stepId,
+      user.user,
+      dto,
+    );
+  }
 
-  // /**
-  //  * Get requests sent by the user
-  //  * GET /requests/sent
-  //  */
-  // @Get('sent')
-  // async getSentRequests(
-  //   @UserReal() user: UserReal,
-  //   @Query() query: RequestQueryDto,
-  // ) {
-  //   const page = query.page ? parseInt(query.page.toString()) : 1;
-  //   const limit = query.limit ? parseInt(query.limit.toString()) : 10;
+  @Post(':requestId/investor-agreement')
+  @UseInterceptors(FileInterceptor('file', LEGACY_UPLOAD_MULTER_OPTIONS))
+  uploadInvestorAgreement(
+    @UserReal() user: UserReal,
+    @Param('requestId') requestId: string,
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    return this.requestService.uploadInvestorAgreement(
+      requestId,
+      user.user,
+      file,
+    );
+  }
 
-  //   return this.requestService.getSenderRequests(
-  //     user.user,
-  //     query.status,
-  //     page,
-  //     limit,
-  //   );
-  // }
-
-  // /**
-  //  * Get a specific request by ID
-  //  * GET /requests/:requestId
-  //  */
-  // @Get(':requestId')
-  // async getRequestById(@Param('requestId') requestId: string) {
-  //   return this.requestService.getRequestById(requestId);
-  // }
-
-  // /**
-  //  * Approve or reject a request
-  //  * PATCH /requests/:requestId/respond
-  //  */
-  // @Patch(':requestId/respond')
-  // async respondToRequest(
-  //   @UserReal() user: UserReal,
-  //   @Param('requestId') requestId: string,
-  //   @Body() dto: UpdateRequestStatusDto,
-  // ) {
-  //   return this.requestService.updateRequestStatus(requestId, user.user, dto);
-  // }
-
-  // /**
-  //  * Cancel a request (sender only)
-  //  * DELETE /requests/:requestId
-  //  */
-  // @Delete(':requestId')
-  // @HttpCode(200)
-  // async cancelRequest(
-  //   @UserReal() user: UserReal,
-  //   @Param('requestId') requestId: string,
-  // ) {
-  //   return this.requestService.cancelRequest(requestId, user.user);
-  // }
+  @Delete(':requestId')
+  delete(@UserReal() user: UserReal, @Param('requestId') requestId: string) {
+    return this.requestService.delete(requestId, user.user);
+  }
 }

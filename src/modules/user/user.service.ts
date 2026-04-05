@@ -1,8 +1,9 @@
 import {
   BadRequestException,
-  forwardRef,
   Inject,
   Injectable,
+  Logger,
+  forwardRef,
 } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import * as bcrypt from 'bcrypt';
@@ -17,8 +18,16 @@ import { FarmerService } from '../farmer/farmer.service';
 import { InvestorService } from '../investor/investor.service';
 import { LandOwnerService } from '../land-owner/land-owner.service';
 import { RoleService } from '../role/role.service';
+import {
+  UserUploadCompleteDto,
+  UserUploadRequestDto,
+} from './dtos/user.upload.dto';
 import { User, UserImageTarget } from './schemas/user.schema';
-import { UserCreateI, UserUpdateI } from './user.types';
+import {
+  UserCreateI,
+  UserUpdateI,
+  UserUploadRequestResponseI,
+} from './user.types';
 
 const T = {
   duplicateUserFoundByEmail: 'User with this email already exists',
@@ -29,11 +38,40 @@ const T = {
   userDoesNotHaveRole:
     'User does not have the required role for this operation',
   invalidTarget: 'Invalid target field specified',
+  invalidTargetFieldName: (targetName: string) =>
+    `Invalid target field name: ${targetName}. Must be one of: ${Object.values(UserImageTarget).join(', ')}`,
   noFileProvided: 'No file provided',
+  userRoleRequiredForUploads: 'User role is required before uploading files',
+  uploadFileOutsideTargetPath: (target: UserImageTarget) =>
+    `Uploaded file does not match the expected path for target ${target}`,
+  singleFileTargetDuplicate: (target: UserImageTarget) =>
+    `Target ${target} only accepts a single file`,
+  missingUploadedFiles: 'No uploaded files were provided for persistence',
+  missingUploadContext: (target: UserImageTarget) =>
+    `Upload context not found for target ${target}`,
+  targetRoleMismatch: (target: UserImageTarget, role: string) =>
+    `Target ${target} can only be used by ${role} users`,
 };
+
+interface UploadedFileDescriptor {
+  target: UserImageTarget;
+  fileName: string;
+  size: number;
+  mimeType: string;
+}
+
+interface UploadTargetContext {
+  readonly target: UserImageTarget;
+  readonly folderPath: string;
+  readonly allowMultiple: boolean;
+  readonly existingFiles: File[];
+  persist(files: Partial<File>[]): Promise<void>;
+}
 
 @Injectable()
 export class UserService {
+  private readonly logger = new Logger(UserService.name);
+
   constructor(
     @InjectModel(User.name) private readonly userModel: Model<User>,
     private readonly roleService: RoleService,
@@ -63,8 +101,7 @@ export class UserService {
     const filter: FilterQuery<User> = {};
     if (search) {
       filter.$or = [
-        { firstName: { $regex: search, $options: 'i' } },
-        { lastName: { $regex: search, $options: 'i' } },
+        { fullName: { $regex: search, $options: 'i' } },
         { email: { $regex: search, $options: 'i' } },
       ];
     }
@@ -98,14 +135,7 @@ export class UserService {
   }
 
   async findById(target: string): Promise<User> {
-    const selectedUser = await this.userModel
-      .findById(target)
-      .populate('role')
-      .select('-statues')
-      .exec();
-
-    if (!selectedUser)
-      throw new BadRequestException(T.userNotFoundById(target));
+    const selectedUser = await this.getUserDocumentById(target);
 
     return await this.enrichUserWithFileUrls(selectedUser);
   }
@@ -176,7 +206,7 @@ export class UserService {
   }
 
   async assignRole(target: string, role: string): Promise<User | null> {
-    const user = await this.findById(target);
+    const user = await this.getUserDocumentById(target);
     if (user.role) throw new BadRequestException(T.roleAlreadyAssigned);
 
     await this.roleService.findById(role);
@@ -191,7 +221,7 @@ export class UserService {
   }
 
   async unassignRole(userId: string, role: string): Promise<User | null> {
-    const user = await this.findById(userId);
+    const user = await this.getUserDocumentById(userId);
     if (!user.role || user.role._id.toString() !== role)
       throw new BadRequestException(T.roleNotAssigned);
 
@@ -205,7 +235,7 @@ export class UserService {
   }
 
   async updateById(target: string, user: UserUpdateI): Promise<User | null> {
-    await this.findById(target);
+    await this.getUserDocumentById(target);
 
     return await this.userModel
       .findByIdAndUpdate(target, user, {
@@ -215,7 +245,7 @@ export class UserService {
   }
 
   async deleteById(target: string): Promise<ResponseType> {
-    await this.findById(target);
+    await this.getUserDocumentById(target);
 
     await this.userModel.deleteOne({ _id: target }).exec();
 
@@ -225,84 +255,157 @@ export class UserService {
     };
   }
 
+  async createUploadRequests(
+    userId: string,
+    body: UserUploadRequestDto,
+  ): Promise<UserUploadRequestResponseI> {
+    const user = await this.getUserDocumentById(userId);
+    this.validateTargetUsage(
+      body.files.map((file) => file.target),
+      true,
+    );
+
+    const targetContexts = await this.buildUploadTargetContexts(
+      user,
+      body.files.map((file) => file.target),
+    );
+
+    const files = await Promise.all(
+      body.files.map(async (file) => {
+        const targetContext = targetContexts.get(file.target);
+        if (!targetContext)
+          throw new BadRequestException(T.missingUploadContext(file.target));
+
+        const fileName = this.azureBlobStorageService.createBlobFileName(
+          file.originalName,
+          targetContext.folderPath,
+        );
+        const uploadUrl = await this.azureBlobStorageService.generateUploadUrl(
+          fileName,
+          file.contentType,
+        );
+
+        return {
+          target: file.target,
+          fileName,
+          uploadUrl: uploadUrl.url,
+          method: uploadUrl.method,
+          headers: uploadUrl.headers,
+        };
+      }),
+    );
+
+    return { files };
+  }
+
+  async completeUpload(userId: string, body: UserUploadCompleteDto) {
+    const user = await this.getUserDocumentById(userId);
+    this.validateTargetUsage(
+      body.files.map((file) => file.target),
+      true,
+    );
+
+    const targetContexts = await this.buildUploadTargetContexts(
+      user,
+      body.files.map((file) => file.target),
+    );
+
+    const uploadsByTarget = new Map<
+      UserImageTarget,
+      UploadedFileDescriptor[]
+    >();
+
+    for (const file of body.files) {
+      const targetContext = targetContexts.get(file.target);
+      if (!targetContext)
+        throw new BadRequestException(T.missingUploadContext(file.target));
+
+      this.ensureFileBelongsToTarget(file.fileName, targetContext);
+
+      const uploadedFile = await this.azureBlobStorageService.getFileDetails(
+        file.fileName,
+      );
+
+      const uploads = uploadsByTarget.get(file.target) ?? [];
+      uploads.push({
+        target: file.target,
+        fileName: uploadedFile.fileName,
+        size: uploadedFile.size || file.size,
+        mimeType: uploadedFile.contentType || file.mimeType,
+      });
+      uploadsByTarget.set(file.target, uploads);
+    }
+
+    await this.persistUploadedFiles(targetContexts, uploadsByTarget, true);
+
+    return this.findById(userId);
+  }
+
   async uploadMultipleFilesByFieldName(userId: string, files: any[]) {
-    const user = await this.findById(userId);
+    const user = await this.getUserDocumentById(userId);
 
     if (!files || files.length === 0)
       throw new BadRequestException(T.noFileProvided);
 
-    const filesByTarget = new Map<string, any[]>();
+    const groupedFiles = new Map<UserImageTarget, any[]>();
     for (const file of files) {
-      // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-      const targetFieldname: string = file.fieldname as string;
-      if (!filesByTarget.has(targetFieldname))
-        filesByTarget.set(targetFieldname, []);
-
-      filesByTarget.get(targetFieldname)!.push(file);
+      const target = this.parseUploadTarget(file.fieldname as string);
+      const currentFiles = groupedFiles.get(target) ?? [];
+      currentFiles.push(file);
+      groupedFiles.set(target, currentFiles);
     }
 
-    for (const [targetName, targetFiles] of filesByTarget) {
-      if (
-        !Object.values(UserImageTarget).includes(targetName as UserImageTarget)
-      )
-        throw new BadRequestException(
-          `Invalid target field name: ${targetName}. Must be one of: ${Object.values(UserImageTarget).join(', ')}`,
+    const targetContexts = await this.buildUploadTargetContexts(
+      user,
+      Array.from(groupedFiles.keys()),
+    );
+
+    const uploadsByTarget = new Map<
+      UserImageTarget,
+      UploadedFileDescriptor[]
+    >();
+
+    for (const [target, targetFiles] of groupedFiles) {
+      const targetContext = targetContexts.get(target);
+      if (!targetContext)
+        throw new BadRequestException(T.missingUploadContext(target));
+
+      const filesToUpload = targetContext.allowMultiple
+        ? targetFiles
+        : [targetFiles[0]];
+
+      if (!targetContext.allowMultiple && targetFiles.length > 1) {
+        this.logger.warn(
+          `Target ${target} does not support multiple files. Only the first file will be uploaded.`,
         );
-
-      const target = targetName as UserImageTarget;
-
-      const isFarmerTarget =
-        target === UserImageTarget.GOVIJANA_SEVA_PASSBOOK ||
-        target === UserImageTarget.GN_CERTIFICATE;
-
-      const isLandOwnerTarget =
-        target === UserImageTarget.BIMSAVIYA_CERTIFICATE ||
-        target === UserImageTarget.LAND_IMAGES;
-
-      if (isFarmerTarget) {
-        for (const file of targetFiles) {
-          await this.uploadFarmerFile(userId, file, target);
-        }
-      } else if (isLandOwnerTarget) {
-        for (const file of targetFiles) {
-          await this.uploadLandOwnerFile(userId, file, target);
-        }
-      } else {
-        if (targetFiles.length > 1)
-          console.warn(
-            `Target ${target} does not support multiple files. Only the first file will be uploaded.`,
-          );
-
-        await this.deleteExistingFile(user, target);
-
-        const userFolderPath = `${user.role.name.toLocaleLowerCase()}s/${userId}/${target}`;
-
-        const uploadResult = await this.azureBlobStorageService.uploadFile(
-          targetFiles[0],
-          userFolderPath,
-        );
-
-        const fileData: Partial<File> = {
-          filename: uploadResult.fileName,
-          fileSize: uploadResult.size.toString(),
-          mimeType: uploadResult.contentType,
-        };
-
-        const updateData = this.buildUpdateData(target, fileData);
-
-        await this.userModel
-          .findByIdAndUpdate(userId, updateData, { new: true })
-          .exec();
       }
+
+      const uploads: UploadedFileDescriptor[] = [];
+      for (const targetFile of filesToUpload) {
+        const uploadResult = await this.azureBlobStorageService.uploadFile(
+          targetFile,
+          targetContext.folderPath,
+        );
+
+        uploads.push({
+          target,
+          fileName: uploadResult.fileName,
+          size: uploadResult.size,
+          mimeType: uploadResult.contentType,
+        });
+      }
+
+      uploadsByTarget.set(target, uploads);
     }
 
-    return await this.findById(userId);
+    await this.persistUploadedFiles(targetContexts, uploadsByTarget, false);
+
+    return this.findById(userId);
   }
 
   private async enrichUserWithFileUrls(user: User): Promise<User> {
     const userObj: Record<string, any> = user.toObject ? user.toObject() : user;
 
-    // Add URLs for personal info files
     if (userObj.personalInfo) {
       if (userObj.personalInfo.profilePicture?.filename) {
         userObj.personalInfo.profilePicture.url =
@@ -324,7 +427,6 @@ export class UserService {
       }
     }
 
-    // Add URLs for farmer files
     if (userObj.role?.name?.toLowerCase() === 'farmer') {
       try {
         const farmer = await this.farmerService.findByUserId(
@@ -348,7 +450,6 @@ export class UserService {
       }
     }
 
-    // Add URLs for landowner files
     if (userObj.role?.name?.toLowerCase() === 'landowner') {
       try {
         const landOwner = await this.landOwnerService.findByUserId(
@@ -375,7 +476,6 @@ export class UserService {
       }
     }
 
-    // Add URLs for investor files
     if (userObj.role?.name?.toLowerCase() === 'investor') {
       try {
         const investor = await this.investorService.findByUserId(
@@ -390,129 +490,279 @@ export class UserService {
     return userObj as User;
   }
 
-  private async deleteExistingFile(
+  private async getUserDocumentById(target: string): Promise<User> {
+    const selectedUser = await this.userModel
+      .findById(target)
+      .populate('role')
+      .select('-statues')
+      .exec();
+
+    if (!selectedUser)
+      throw new BadRequestException(T.userNotFoundById(target));
+
+    return selectedUser;
+  }
+
+  private parseUploadTarget(targetName: string): UserImageTarget {
+    if (!Object.values(UserImageTarget).includes(targetName as UserImageTarget))
+      throw new BadRequestException(T.invalidTargetFieldName(targetName));
+
+    return targetName as UserImageTarget;
+  }
+
+  private validateTargetUsage(
+    targets: UserImageTarget[],
+    strictSingleTarget: boolean,
+  ) {
+    const counts = new Map<UserImageTarget, number>();
+
+    for (const target of targets) {
+      counts.set(target, (counts.get(target) ?? 0) + 1);
+    }
+
+    for (const [target, count] of counts) {
+      if (count <= 1 || this.isMultiFileTarget(target)) continue;
+
+      if (strictSingleTarget)
+        throw new BadRequestException(T.singleFileTargetDuplicate(target));
+
+      this.logger.warn(
+        `Target ${target} received multiple files. Only the first file will be kept.`,
+      );
+    }
+  }
+
+  private async buildUploadTargetContexts(
     user: User,
-    imageTarget: UserImageTarget,
-  ): Promise<void> {
-    let existingFile: File | undefined;
+    targets: UserImageTarget[],
+  ): Promise<Map<UserImageTarget, UploadTargetContext>> {
+    const contexts = new Map<UserImageTarget, UploadTargetContext>();
 
-    switch (imageTarget) {
+    for (const target of new Set(targets)) {
+      contexts.set(target, await this.resolveUploadTargetContext(user, target));
+    }
+
+    return contexts;
+  }
+
+  private async resolveUploadTargetContext(
+    user: User,
+    target: UserImageTarget,
+  ): Promise<UploadTargetContext> {
+    switch (target) {
       case UserImageTarget.PROFILE_PICTURE:
-        existingFile = user.personalInfo?.profilePicture;
-        break;
       case UserImageTarget.NIC_FRONT:
-        existingFile = user.personalInfo?.nicFrontImage;
-        break;
       case UserImageTarget.NIC_BACK:
-        existingFile = user.personalInfo?.nicBackImage;
-        break;
-    }
-
-    if (existingFile && existingFile.filename) {
-      try {
-        await this.azureBlobStorageService.deleteFile(existingFile.filename);
-      } catch {
-        console.warn(
-          `Failed to delete existing file: ${existingFile.filename}. Continuing with upload.`,
-        );
-      }
-    }
-  }
-
-  private async uploadFarmerFile(
-    target: string,
-    file: any,
-    imageTarget: UserImageTarget,
-  ) {
-    const farmer = await this.farmerService.findByUserId(target);
-
-    await this.deleteFarmerExistingFile(farmer, imageTarget);
-
-    const farmerFolderPath = `farmers/${farmer._id.toString()}/${imageTarget}`;
-
-    const uploadResult = await this.azureBlobStorageService.uploadFile(
-      file,
-      farmerFolderPath,
-    );
-
-    const fileData: Partial<File> = {
-      filename: uploadResult.fileName,
-      fileSize: uploadResult.size.toString(),
-      mimeType: uploadResult.contentType,
-    };
-
-    const updateField = this.buildFarmerUpdateField(imageTarget);
-
-    const updateData = {
-      [updateField]: fileData,
-    };
-
-    return await this.farmerService.updateById(
-      farmer._id.toString(),
-      updateData as any,
-    );
-  }
-
-  private async uploadLandOwnerFile(
-    userId: string,
-    file: any,
-    imageTarget: UserImageTarget,
-  ) {
-    const landOwner = await this.landOwnerService.findByUserId(userId);
-
-    await this.deleteLandOwnerExistingFile(landOwner, imageTarget);
-
-    const landOwnerFolderPath = `landowners/${landOwner._id.toString()}/${imageTarget}`;
-
-    const uploadResult = await this.azureBlobStorageService.uploadFile(
-      file,
-      landOwnerFolderPath,
-    );
-
-    const fileData: Partial<File> = {
-      filename: uploadResult.fileName,
-      fileSize: uploadResult.size.toString(),
-      mimeType: uploadResult.contentType,
-    };
-
-    const updateField = this.buildLandOwnerUpdateField(imageTarget);
-
-    const updateData = {
-      [updateField]: fileData,
-    };
-
-    return await this.landOwnerService.updateById(
-      landOwner._id.toString(),
-      updateData as any,
-    );
-  }
-
-  private async deleteFarmerExistingFile(
-    farmer: {
-      GovijanaSevaPassbookImage?: File;
-      gnCertificateImage?: File;
-    },
-    imageTarget: UserImageTarget,
-  ): Promise<void> {
-    let existingFile: File | undefined;
-
-    switch (imageTarget) {
+        return this.buildUserUploadTargetContext(user, target);
       case UserImageTarget.GOVIJANA_SEVA_PASSBOOK:
-        existingFile = farmer.GovijanaSevaPassbookImage;
-        break;
       case UserImageTarget.GN_CERTIFICATE:
-        existingFile = farmer.gnCertificateImage;
-        break;
+        return this.buildFarmerUploadTargetContext(user, target);
+      case UserImageTarget.BIMSAVIYA_CERTIFICATE:
+      case UserImageTarget.LAND_IMAGES:
+        return this.buildLandOwnerUploadTargetContext(user, target);
+      default:
+        throw new BadRequestException(T.invalidTarget);
     }
+  }
 
-    if (existingFile && existingFile.filename) {
+  private buildUserUploadTargetContext(
+    user: User,
+    target: UserImageTarget,
+  ): UploadTargetContext {
+    const userId = user._id.toString();
+    const folderPath = `${this.getUserRoleFolder(user)}/${userId}/${target}`;
+    const existingFile = this.getExistingUserFile(user, target);
+
+    return {
+      target,
+      folderPath,
+      allowMultiple: false,
+      existingFiles: this.compactFiles([existingFile]),
+      persist: async (files) => {
+        const [file] = files;
+        await this.userModel
+          .findByIdAndUpdate(userId, this.buildUpdateData(target, file), {
+            new: true,
+          })
+          .exec();
+      },
+    };
+  }
+
+  private async buildFarmerUploadTargetContext(
+    user: User,
+    target: UserImageTarget,
+  ): Promise<UploadTargetContext> {
+    this.ensureUserRole(user, 'farmer', target);
+
+    const farmer = await this.farmerService.findByUserId(user._id.toString());
+    const updateField = this.buildFarmerUpdateField(target);
+    const existingFile =
+      target === UserImageTarget.GOVIJANA_SEVA_PASSBOOK
+        ? farmer.GovijanaSevaPassbookImage
+        : farmer.gnCertificateImage;
+
+    return {
+      target,
+      folderPath: `farmers/${farmer._id.toString()}/${target}`,
+      allowMultiple: false,
+      existingFiles: this.compactFiles([existingFile]),
+      persist: async (files) => {
+        const [file] = files;
+        await this.farmerService.updateById(farmer._id.toString(), {
+          [updateField]: file,
+        } as any);
+      },
+    };
+  }
+
+  private async buildLandOwnerUploadTargetContext(
+    user: User,
+    target: UserImageTarget,
+  ): Promise<UploadTargetContext> {
+    this.ensureUserRole(user, 'landowner', target);
+
+    const landOwner = await this.landOwnerService.findByUserId(
+      user._id.toString(),
+    );
+    const updateField = this.buildLandOwnerUpdateField(target);
+    const existingFiles =
+      target === UserImageTarget.LAND_IMAGES
+        ? (landOwner.landAddress?.landImages ?? [])
+        : this.compactFiles([landOwner.landAddress?.bimsaviyaCertificate]);
+
+    return {
+      target,
+      folderPath: `landowners/${landOwner._id.toString()}/${target}`,
+      allowMultiple: target === UserImageTarget.LAND_IMAGES,
+      existingFiles: this.compactFiles(existingFiles),
+      persist: async (files) => {
+        await this.landOwnerService.updateById(landOwner._id.toString(), {
+          [updateField]:
+            target === UserImageTarget.LAND_IMAGES ? files : files[0],
+        } as any);
+      },
+    };
+  }
+
+  private async persistUploadedFiles(
+    targetContexts: Map<UserImageTarget, UploadTargetContext>,
+    uploadsByTarget: Map<UserImageTarget, UploadedFileDescriptor[]>,
+    strictSingleTarget: boolean,
+  ) {
+    for (const [target, uploads] of uploadsByTarget) {
+      const targetContext = targetContexts.get(target);
+      if (!targetContext)
+        throw new BadRequestException(T.missingUploadContext(target));
+
+      if (!uploads.length)
+        throw new BadRequestException(T.missingUploadedFiles);
+
+      const selectedUploads = targetContext.allowMultiple
+        ? uploads
+        : [this.selectSingleTargetUpload(target, uploads, strictSingleTarget)];
+
+      const persistedFiles = selectedUploads.map((upload) =>
+        this.buildStoredFile(upload),
+      );
+
+      await targetContext.persist(persistedFiles);
+      await this.deleteExistingFiles(
+        targetContext.existingFiles,
+        new Set(selectedUploads.map((upload) => upload.fileName)),
+      );
+    }
+  }
+
+  private selectSingleTargetUpload(
+    target: UserImageTarget,
+    uploads: UploadedFileDescriptor[],
+    strictSingleTarget: boolean,
+  ): UploadedFileDescriptor {
+    if (uploads.length === 1) return uploads[0];
+
+    if (strictSingleTarget)
+      throw new BadRequestException(T.singleFileTargetDuplicate(target));
+
+    this.logger.warn(
+      `Target ${target} received multiple uploaded files. Persisting only the first entry.`,
+    );
+
+    return uploads[0];
+  }
+
+  private buildStoredFile(upload: UploadedFileDescriptor): Partial<File> {
+    return {
+      filename: upload.fileName,
+      fileSize: upload.size.toString(),
+      mimeType: upload.mimeType,
+    };
+  }
+
+  private async deleteExistingFiles(
+    existingFiles: File[],
+    keepFileNames: Set<string>,
+  ) {
+    for (const file of existingFiles) {
+      if (!file?.filename || keepFileNames.has(file.filename)) continue;
+
       try {
-        await this.azureBlobStorageService.deleteFile(existingFile.filename);
+        await this.azureBlobStorageService.deleteFile(file.filename);
       } catch {
-        console.warn(
-          `Failed to delete existing farmer file: ${existingFile.filename}. Continuing with upload.`,
+        this.logger.warn(
+          `Failed to delete previous file ${file.filename}. Continuing with updated metadata.`,
         );
       }
+    }
+  }
+
+  private ensureFileBelongsToTarget(
+    fileName: string,
+    targetContext: UploadTargetContext,
+  ) {
+    const expectedPrefix = `${targetContext.folderPath}/`;
+    if (!fileName.startsWith(expectedPrefix))
+      throw new BadRequestException(
+        T.uploadFileOutsideTargetPath(targetContext.target),
+      );
+  }
+
+  private getUserRoleFolder(user: User): string {
+    const roleName = this.getUserRoleName(user);
+
+    return `${roleName}s`;
+  }
+
+  private getUserRoleName(user: User): string {
+    const roleName = user.role?.name?.toLowerCase();
+
+    if (!roleName) throw new BadRequestException(T.userRoleRequiredForUploads);
+
+    return roleName;
+  }
+
+  private ensureUserRole(
+    user: User,
+    requiredRole: string,
+    target: UserImageTarget,
+  ) {
+    if (this.getUserRoleName(user) !== requiredRole)
+      throw new BadRequestException(T.targetRoleMismatch(target, requiredRole));
+  }
+
+  private getExistingUserFile(
+    user: User,
+    target: UserImageTarget,
+  ): File | undefined {
+    switch (target) {
+      case UserImageTarget.PROFILE_PICTURE:
+        return user.personalInfo?.profilePicture;
+      case UserImageTarget.NIC_FRONT:
+        return user.personalInfo?.nicFrontImage;
+      case UserImageTarget.NIC_BACK:
+        return user.personalInfo?.nicBackImage;
+      default:
+        return undefined;
     }
   }
 
@@ -546,56 +796,6 @@ export class UserService {
     return fieldPath;
   }
 
-  private async deleteLandOwnerExistingFile(
-    landOwner: {
-      landAddress?: {
-        bimsaviyaCertificate?: File;
-        landImages?: File[];
-      };
-    },
-    imageTarget: UserImageTarget,
-  ): Promise<void> {
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-member-access
-    const landAddress = (landOwner as any)?.landAddress;
-
-    if (!landAddress) return;
-
-    switch (imageTarget) {
-      case UserImageTarget.BIMSAVIYA_CERTIFICATE: {
-        const existingFile = landAddress.bimsaviyaCertificate;
-        if (existingFile && existingFile.filename) {
-          try {
-            await this.azureBlobStorageService.deleteFile(
-              existingFile.filename,
-            );
-          } catch {
-            console.warn(
-              `Failed to delete existing bimsaviya certificate: ${existingFile.filename}. Continuing with upload.`,
-            );
-          }
-        }
-        break;
-      }
-      case UserImageTarget.LAND_IMAGES: {
-        const existingFiles = landAddress.landImages;
-        if (existingFiles && Array.isArray(existingFiles)) {
-          for (const file of existingFiles) {
-            if (file && file.filename) {
-              try {
-                await this.azureBlobStorageService.deleteFile(file.filename);
-              } catch {
-                console.warn(
-                  `Failed to delete existing land image: ${file.filename}. Continuing with upload.`,
-                );
-              }
-            }
-          }
-        }
-        break;
-      }
-    }
-  }
-
   private buildLandOwnerUpdateField(target: UserImageTarget): string {
     const updateMap: Partial<Record<UserImageTarget, string>> = {
       [UserImageTarget.BIMSAVIYA_CERTIFICATE]:
@@ -607,5 +807,13 @@ export class UserService {
     if (!fieldPath) throw new BadRequestException(T.invalidTarget);
 
     return fieldPath;
+  }
+
+  private isMultiFileTarget(target: UserImageTarget): boolean {
+    return target === UserImageTarget.LAND_IMAGES;
+  }
+
+  private compactFiles(files: Array<File | undefined>): File[] {
+    return files.filter((file): file is File => !!file?.filename);
   }
 }

@@ -1,6 +1,9 @@
 import { Injectable, InternalServerErrorException } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { BlobServiceClient } from '@azure/storage-blob';
+import {
+  BlobServiceClient,
+  StorageSharedKeyCredential,
+} from '@azure/storage-blob';
 
 @Injectable()
 export class AzureStorageService {
@@ -8,6 +11,8 @@ export class AzureStorageService {
   private containerName: string;
   private accountKey: string;
   private accountName: string;
+  private sharedKeyCredential: StorageSharedKeyCredential;
+  private uploadSasExpirationMinutes: number;
 
   constructor(private configService: ConfigService) {
     this.initializeAzureClient();
@@ -31,6 +36,12 @@ export class AzureStorageService {
     this.accountName = accountName;
     this.accountKey = accountKey;
     this.containerName = containerName || 'files';
+    this.uploadSasExpirationMinutes =
+      this.configService.get<number>('azure.uploadSasExpirationMinutes') ?? 15;
+    this.sharedKeyCredential = new StorageSharedKeyCredential(
+      accountName,
+      accountKey,
+    );
 
     const connectionString = `DefaultEndpointsProtocol=https;AccountName=${accountName};AccountKey=${accountKey};EndpointSuffix=core.windows.net`;
     this.blobServiceClient =
@@ -51,5 +62,13 @@ export class AzureStorageService {
 
   getAccountKey(): string {
     return this.accountKey;
+  }
+
+  getSharedKeyCredential(): StorageSharedKeyCredential {
+    return this.sharedKeyCredential;
+  }
+
+  getUploadSasExpirationMinutes(): number {
+    return this.uploadSasExpirationMinutes;
   }
 }

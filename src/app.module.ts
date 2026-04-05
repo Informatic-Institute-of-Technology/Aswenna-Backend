@@ -6,7 +6,7 @@ import { AzureConfigModule } from './config/azure/azure.module';
 import { HealthModule } from './core/health/health.module';
 import { UserModule } from './modules/user/user.module';
 import { AuthModule } from './modules/auth/auth.module';
-import { PermissionModule } from './modules/permission/permission.module';
+import { PermissionModule } from './modules/permissions/permission.module';
 import { InvestorModule } from './modules/investor/investor.module';
 import { FarmerModule } from './modules/farmer/farmer.module';
 import { LandOwnerModule } from './modules/land-owner/land-owner.module';
@@ -17,6 +17,13 @@ import { MailModule } from './config/mail/mail.module';
 import { NotificationModule } from './modules/notification/notification.module';
 import { FileUploadModule } from './modules/file-upload/file-upload.module';
 import { ScheduleModule } from '@nestjs/schedule';
+import { FarmerAdsModule } from './modules/farmer/farmer-ads.module';
+import { FarmerOfferModule } from './modules/farmer/farmer-offer.module';
+import { ConversationsModule } from './modules/conversations/conversations.module';
+import { MessagesModule } from './modules/messages/messages.module';
+import { ChatModule } from './modules/chat/chat.module';
+import { LandOwnerAdsModule } from './modules/land-owner/land-ads/land-owner-ads.module';
+import { LandOwnerOfferModule } from './modules/land-owner/land-owner-offer.module';
 
 @Module({
   imports: [
@@ -38,6 +45,13 @@ import { ScheduleModule } from '@nestjs/schedule';
     NotificationModule,
     MailModule,
     FileUploadModule,
+    FarmerAdsModule,
+    FarmerOfferModule,
+    ConversationsModule,
+    MessagesModule,
+    ChatModule,
+    LandOwnerAdsModule,
+    LandOwnerOfferModule,
   ],
 })
 export class AppModule {}

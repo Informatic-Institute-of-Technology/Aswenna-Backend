@@ -9,6 +9,12 @@ This module provides file upload, deletion, and pre-signed URL generation functi
 - **Pre-Signed URLs**: Generate time-limited pre-signed URLs for secure file access
 - **File Retrieval**: Get direct URLs for uploaded files
 
+## Deprecation Notice
+
+- `POST /file-upload/upload` is now a legacy multipart endpoint.
+- It is capped at `10MB` per file and `10` files per request to prevent API memory exhaustion.
+- Large uploads should use the user direct-upload flow: request upload URLs from the API, upload bytes directly to Azure Blob Storage, then call the completion endpoint to persist metadata.
+
 ## API Endpoints
 
 ### 1. Upload File
@@ -16,6 +22,8 @@ This module provides file upload, deletion, and pre-signed URL generation functi
 **POST** `/file-upload/upload`
 
 Upload a file to Azure Blob Storage.
+
+> Deprecated for large files. This route is limited to 10MB per file and 10 files per request.
 
 **Request:**
 
@@ -161,6 +169,7 @@ Required environment variables for Azure Storage configuration:
 AZURE_STORAGE_ACCOUNT_NAME=your-storage-account-name
 AZURE_STORAGE_ACCOUNT_KEY=your-storage-account-key
 AZURE_STORAGE_CONTAINER_NAME=files
+AZURE_UPLOAD_SAS_EXPIRATION_MINUTES=15
 ```
 
 See `.env.example` for reference.

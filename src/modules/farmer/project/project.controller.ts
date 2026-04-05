@@ -15,18 +15,23 @@ import {
   ProjectUpdateDto,
 } from './dtos/project.update.dto';
 import { ProjectParamsDto, ProjectQueryDto } from './dtos/project.query.dto';
+import { UserReal } from 'src/core/decorators/user.decorators';
+import { Auth } from 'src/core/decorators/auth.decorator';
 
 @Controller({ path: 'farmer-project', version: '1' })
+@Auth()
 export class ProjectController {
   constructor(private readonly projectService: ProjectService) {}
 
   @Get()
-  async findAll(@Query() query: ProjectQueryDto) {
+  async findAll(@Query() query: ProjectQueryDto, @UserReal() user: UserReal) {
     return this.projectService.findAll(
       query.page,
       query.limit,
       query.search,
       query.sort,
+      user,
+      query.projectType,
     );
   }
 
