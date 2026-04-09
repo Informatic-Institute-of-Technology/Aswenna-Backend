@@ -11,7 +11,7 @@ export class FarmerAd {
 
   @Prop()
   offerType: string;
-
+  
   @Prop()
   projectName: string;
 
@@ -39,7 +39,24 @@ export class FarmerAd {
   @Prop([String])
   preferredRegions: string[];
 
+
+  @Prop([
+    {
+      category: String,
+      description: String,
+      estimatedCost: Number,
+    },
+  ])
+  costBreakdown: {
+    category: string;
+    description: string;
+    estimatedCost: number;
+  }[];
+
   @Prop()
+  totalInvestmentRequired: number;
+
+   @Prop()
   expectedHarvest: number;
 
   @Prop()
